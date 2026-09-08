@@ -1,0 +1,348 @@
+import { StaffMember, DispatchedDocument, SchoolSettings, StaffSignature, AuthSession, CircularTemplate } from '../types';
+import { INITIAL_STAFF_MEMBERS, INITIAL_DISPATCHED_DOCUMENTS, DEFAULT_SCHOOL_SETTINGS } from '../data/sampleStaff';
+import { INITIAL_CIRCULAR_TEMPLATES } from '../data/sampleTemplates';
+
+const STORAGE_KEYS = {
+  STAFF: 'shariah_platform_staff_v1',
+  DOCUMENTS: 'shariah_platform_documents_v1',
+  SETTINGS: 'shariah_platform_settings_v1',
+  AUTH: 'shariah_platform_auth_session_v1',
+  TEMPLATES: 'shariah_platform_templates_v1',
+};
+
+export function loadStaffMembers(): StaffMember[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.STAFF);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        let changed = false;
+        
+        // Retain only staff-1 and staff-2 (or new user-added staff that wasn't in the old dummy list)
+        let filtered = parsed.filter((m: StaffMember) => {
+          const num = parseInt(m.id.replace('staff-', ''), 10);
+          if (!isNaN(num) && num >= 3 && num <= 20) {
+            changed = true;
+            return false;
+          }
+          return true;
+        });
+
+        if (filtered.length === 0) {
+          filtered = INITIAL_STAFF_MEMBERS;
+          changed = true;
+        }
+
+        const mapped = filtered.map((m: StaffMember) => {
+          let updatedName = m.name;
+          if (m.id === 'staff-1' || m.role === 'principal' || m.name.includes('الشريفي')) {
+            updatedName = 'حمود بن علي محمد نهاري';
+            changed = true;
+          }
+          return {
+            ...m,
+            name: updatedName,
+            pin: m.pin || m.nationalId.slice(-4)
+          };
+        });
+        if (changed) {
+          saveStaffMembers(mapped);
+        }
+        return mapped;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading staff from localStorage:', e);
+  }
+  return INITIAL_STAFF_MEMBERS.map(m => ({
+    ...m,
+    pin: m.pin || m.nationalId.slice(-4)
+  }));
+}
+
+export function saveStaffMembers(staff: StaffMember[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff));
+  } catch (e) {
+    console.error('Error saving staff to localStorage:', e);
+  }
+}
+
+export function updateStaffPin(staffId: string, newPin: string): StaffMember[] {
+  const staff = loadStaffMembers();
+  const updated = staff.map(s => s.id === staffId ? { ...s, pin: newPin } : s);
+  saveStaffMembers(updated);
+  return updated;
+}
+
+export function loadAuthSession(): AuthSession | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.role === 'admin' || parsed.role === 'staff')) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading auth session:', e);
+  }
+  return null;
+}
+
+export function saveAuthSession(session: AuthSession | null): void {
+  try {
+    if (session) {
+      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.AUTH);
+    }
+  } catch (e) {
+    console.error('Error saving auth session:', e);
+  }
+}
+
+export function loadDocuments(): DispatchedDocument[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        let docsChanged = false;
+        const cleaned = parsed
+          .filter((doc: DispatchedDocument) => {
+            // Remove sample inquiry doc if it was specifically targeting deleted staff-17
+            if (doc.type === 'inquiry' && doc.inquiryData?.staffId && doc.inquiryData.staffId !== 'staff-1' && doc.inquiryData.staffId !== 'staff-2') {
+              const num = parseInt(doc.inquiryData.staffId.replace('staff-', ''), 10);
+              if (!isNaN(num) && num >= 3 && num <= 20) {
+                docsChanged = true;
+                return false;
+              }
+            }
+            return true;
+          })
+          .map((doc: DispatchedDocument) => {
+            let docCopy = { ...doc };
+            if (docCopy.hijriDate && docCopy.hijriDate.includes('1448')) {
+              docCopy.hijriDate = docCopy.hijriDate.replace(/1448/g, '1446');
+              docsChanged = true;
+            }
+            if (docCopy.circularData && docCopy.circularData.hijriDate?.includes('1448')) {
+              docCopy.circularData = {
+                ...docCopy.circularData,
+                hijriDate: docCopy.circularData.hijriDate.replace(/1448/g, '1446')
+              };
+              docsChanged = true;
+            }
+            if (docCopy.inquiryData && docCopy.inquiryData.hijriDate?.includes('1448')) {
+              docCopy.inquiryData = {
+                ...docCopy.inquiryData,
+                hijriDate: docCopy.inquiryData.hijriDate.replace(/1448/g, '1446'),
+                details: docCopy.inquiryData.details ? docCopy.inquiryData.details.replace(/1448/g, '1446') : docCopy.inquiryData.details
+              };
+              docsChanged = true;
+            }
+            // Filter targetStaffIds to remove old deleted dummy staff
+            if (docCopy.targetStaffIds && docCopy.targetStaffIds.some(id => {
+              const num = parseInt(id.replace('staff-', ''), 10);
+              return !isNaN(num) && num >= 3 && num <= 20;
+            })) {
+              docCopy.targetStaffIds = docCopy.targetStaffIds.filter(id => {
+                const num = parseInt(id.replace('staff-', ''), 10);
+                return isNaN(num) || num < 3 || num > 20;
+              });
+              if (docCopy.targetStaffIds.length === 0 && docCopy.type === 'circular') {
+                docCopy.targetStaffIds = ['staff-2'];
+              }
+              docsChanged = true;
+            }
+            // Filter signatures to remove signatures from deleted dummy staff
+            if (docCopy.signatures) {
+              const cleanedSigs: Record<string, StaffSignature> = {};
+              let sigsChanged = false;
+              Object.entries(docCopy.signatures).forEach(([key, sig]) => {
+                const num = parseInt(key.replace('staff-', ''), 10);
+                if (!isNaN(num) && num >= 3 && num <= 20) {
+                  sigsChanged = true;
+                } else {
+                  cleanedSigs[key] = sig;
+                }
+              });
+              if (sigsChanged) {
+                if (docCopy.id === 'doc-cir-101' && !cleanedSigs['staff-2']) {
+                  cleanedSigs['staff-2'] = {
+                    staffId: 'staff-2',
+                    staffName: 'صالح بن فهد الحربي',
+                    nationalId: '1039485721',
+                    phone: '0559876543',
+                    signedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+                    formattedDate: '1446/02/24 09:15 ص',
+                    signatureImage: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='70'><path d='M15,50 Q60,15 110,45 T170,20 Q190,55 195,35' fill='none' stroke='%231b4332' stroke-width='3'/></svg>",
+                    responseText: 'تم العلم والاطلاع والتقيد بجدول المناوبة والإشراف.',
+                    status: 'signed',
+                    receiptCode: 'SHR-CIR-9944',
+                  };
+                }
+                docCopy.signatures = cleanedSigs;
+                docsChanged = true;
+              }
+            }
+            return docCopy;
+          });
+        if (docsChanged) {
+          saveDocuments(cleaned);
+          return cleaned;
+        }
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading documents from localStorage:', e);
+  }
+  return INITIAL_DISPATCHED_DOCUMENTS;
+}
+
+export function saveDocuments(docs: DispatchedDocument[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
+  } catch (e) {
+    console.error('Error saving documents to localStorage:', e);
+  }
+}
+
+export function loadSchoolSettings(): SchoolSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      let changed = false;
+      // Auto-migrate previous default values if they had Mecca or Jumum
+      if (
+        !parsed.educationDepartment || 
+        parsed.educationDepartment.includes('مكة') || 
+        (parsed.officeName && parsed.officeName.includes('الجموم'))
+      ) {
+        parsed.educationDepartment = DEFAULT_SCHOOL_SETTINGS.educationDepartment;
+        parsed.officeName = '';
+        changed = true;
+      }
+      // Auto-migrate old principal name if it matches old placeholder
+      if (!parsed.principalName || parsed.principalName.includes('الشريفي')) {
+        parsed.principalName = DEFAULT_SCHOOL_SETTINGS.principalName;
+        changed = true;
+      }
+      // Auto-migrate academicYear to current official year (1446هـ) if old or containing 1448 or 1446-1447هـ
+      if (
+        !parsed.academicYear || 
+        parsed.academicYear === '1446-1447هـ' || 
+        parsed.academicYear.includes('1448') || 
+        parsed.academicYear.includes('1445') || 
+        parsed.academicYear.includes('1444')
+      ) {
+        parsed.academicYear = DEFAULT_SCHOOL_SETTINGS.academicYear; // "1446هـ"
+        changed = true;
+      }
+      if (changed) {
+        saveSchoolSettings(parsed);
+      }
+      return { ...DEFAULT_SCHOOL_SETTINGS, ...parsed };
+    }
+  } catch (e) {
+    console.error('Error loading settings from localStorage:', e);
+  }
+  return DEFAULT_SCHOOL_SETTINGS;
+}
+
+export function saveSchoolSettings(settings: SchoolSettings): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  } catch (e) {
+    console.error('Error saving settings to localStorage:', e);
+  }
+}
+
+export function saveStaffSignature(docId: string, signature: StaffSignature): DispatchedDocument[] {
+  const docs = loadDocuments();
+  const updatedDocs = docs.map(doc => {
+    if (doc.id === docId) {
+      return {
+        ...doc,
+        signatures: {
+          ...doc.signatures,
+          [signature.staffId]: signature
+        }
+      };
+    }
+    return doc;
+  });
+  saveDocuments(updatedDocs);
+  return updatedDocs;
+}
+
+export function resetToDefaults(): void {
+  localStorage.removeItem(STORAGE_KEYS.STAFF);
+  localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
+  localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+  localStorage.removeItem(STORAGE_KEYS.TEMPLATES);
+}
+
+export function loadCircularTemplates(): CircularTemplate[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading circular templates from localStorage:', e);
+  }
+  // If not found or empty, seed with initial templates
+  saveCircularTemplates(INITIAL_CIRCULAR_TEMPLATES);
+  return INITIAL_CIRCULAR_TEMPLATES;
+}
+
+export function saveCircularTemplates(templates: CircularTemplate[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(templates));
+  } catch (e) {
+    console.error('Error saving circular templates to localStorage:', e);
+  }
+}
+
+export function addCircularTemplate(templateData: Omit<CircularTemplate, 'id' | 'createdAt'>): CircularTemplate {
+  const templates = loadCircularTemplates();
+  const newTemplate: CircularTemplate = {
+    ...templateData,
+    id: `tpl-user-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    isSystemDefault: false,
+  };
+  const updated = [newTemplate, ...templates];
+  saveCircularTemplates(updated);
+  return newTemplate;
+}
+
+export function updateCircularTemplate(id: string, updates: Partial<CircularTemplate>): CircularTemplate[] {
+  const templates = loadCircularTemplates();
+  const updated = templates.map(t => {
+    if (t.id === id) {
+      return {
+        ...t,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return t;
+  });
+  saveCircularTemplates(updated);
+  return updated;
+}
+
+export function deleteCircularTemplate(id: string): CircularTemplate[] {
+  const templates = loadCircularTemplates();
+  const updated = templates.filter(t => t.id !== id);
+  saveCircularTemplates(updated);
+  return updated;
+}

@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print\:hidden,
+  .pdf-hide {
+    display: none !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+  table tr {
+    page-break-inside: avoid !important;
+  }
+}
