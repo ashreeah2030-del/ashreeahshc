@@ -6,6 +6,7 @@ import {
   StaffSignature,
   AuthSession
 } from './types';
+import { ArrowUp } from 'lucide-react';
 import { 
   loadStaffMembers, 
   saveStaffMembers, 
@@ -53,6 +54,20 @@ export default function App() {
   // Active Direct Signing View (Personal Teacher View)
   const [activeSignDocId, setActiveSignDocId] = useState<string | null>(null);
   const [activeSignStaffId, setActiveSignStaffId] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Scroll listener for mobile convenience
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 280) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Initial Data Load
   useEffect(() => {
@@ -245,7 +260,7 @@ export default function App() {
           onOpenTeacherSimulator={() => {}}
         />
 
-        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8">
+        <main className="flex-1 w-full px-2.5 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-8">
           {activeSignDoc && activeSignStaff ? (
             <DocumentSignView
               document={activeSignDoc}
@@ -276,6 +291,19 @@ export default function App() {
             </span>
           </div>
         </footer>
+
+        {/* Floating Scroll-to-Top Button for Mobile & Desktop */}
+        {showScrollTop && (
+          <button
+            id="scroll-to-top-staff-btn"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-5 left-5 z-40 bg-emerald-800 hover:bg-emerald-900 text-white p-3 rounded-full shadow-lg border border-emerald-600/50 flex items-center justify-center transition-all animate-in fade-in cursor-pointer hover:scale-110 active:scale-95"
+            title="العودة لأعلى الصفحة"
+            aria-label="العودة لأعلى الصفحة"
+          >
+            <ArrowUp className="w-5 h-5 text-amber-300" />
+          </button>
+        )}
       </div>
     );
   }
@@ -300,7 +328,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8">
+      <main className="flex-1 w-full px-2.5 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-8">
         {/* If viewing a specific document as a Teacher / Signer */}
         {activeSignDoc && activeSignStaff ? (
           <DocumentSignView
@@ -426,6 +454,19 @@ export default function App() {
           </span>
         </div>
       </footer>
+
+      {/* Floating Scroll-to-Top Button for Mobile & Desktop */}
+      {showScrollTop && (
+        <button
+          id="scroll-to-top-admin-btn"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-5 left-5 z-40 bg-emerald-800 hover:bg-emerald-900 text-white p-3 rounded-full shadow-lg border border-emerald-600/50 flex items-center justify-center transition-all animate-in fade-in cursor-pointer hover:scale-110 active:scale-95"
+          title="العودة لأعلى الصفحة"
+          aria-label="العودة لأعلى الصفحة"
+        >
+          <ArrowUp className="w-5 h-5 text-amber-300" />
+        </button>
+      )}
     </div>
   );
 }

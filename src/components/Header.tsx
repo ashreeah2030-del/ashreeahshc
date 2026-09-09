@@ -68,15 +68,15 @@ export const Header: React.FC<HeaderProps> = ({
   const isStaff = authSession?.role === 'staff';
 
   return (
-    <header className="bg-gradient-to-r from-emerald-50/90 via-amber-50/50 to-emerald-50/80 border-b border-amber-200/80 shadow-xs sticky top-0 z-30 backdrop-blur-xs">
+    <header className="bg-gradient-to-r from-emerald-50/90 via-amber-50/50 to-emerald-50/80 border-b border-amber-200/80 shadow-xs relative lg:sticky lg:top-0 z-30 backdrop-blur-xs">
       {/* Top Green & Yellow Medium Gradient Accent Ribbon */}
       <div className="h-2 w-full bg-gradient-to-r from-emerald-600 via-emerald-500 via-amber-400 via-yellow-400 to-emerald-600 shadow-2xs" />
 
       {/* Top Ministry Banner with Balanced Green & Golden Yellow Blend */}
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 via-amber-600 to-emerald-800 text-white px-4 py-2 border-b border-amber-400/30">
-        <div className="w-full px-2 sm:px-4 lg:px-8 xl:px-10 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <MoeLogo variant="white" size="sm" className="h-6 w-auto opacity-95 hover:opacity-100 transition-opacity" />
+      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 via-amber-600 to-emerald-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 border-b border-amber-400/30">
+        <div className="w-full px-1 sm:px-4 lg:px-8 xl:px-10 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-2.5 text-xs">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap justify-center sm:justify-start">
+            <MoeLogo variant="white" size="sm" className="h-5 sm:h-6 w-auto opacity-95 hover:opacity-100 transition-opacity" />
             <span className="font-bold tracking-wide text-white">المملكة العربية السعودية</span>
             <span className="text-amber-300">•</span>
             <span className="text-emerald-100 font-medium">وزارة التعليم</span>
@@ -84,10 +84,10 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-amber-200 font-semibold">{schoolSettings.educationDepartment}</span>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap justify-center sm:justify-end">
             {/* User Session Info */}
             {authSession && (
-              <div className="flex items-center gap-2 bg-emerald-950/70 px-3 py-1 rounded-lg border border-amber-400/30 text-xs">
+              <div className="flex items-center gap-2 bg-emerald-950/70 px-2.5 sm:px-3 py-1 rounded-lg border border-amber-400/30 text-xs">
                 {isAdmin ? (
                   <div className="flex items-center gap-1.5 text-amber-300 font-bold">
                     <Lock className="w-3.5 h-3.5" />
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            <div className="flex items-center gap-1.5 bg-emerald-950/60 px-3 py-1 rounded-lg border border-amber-400/30 text-amber-200">
+            <div className="flex items-center gap-1.5 bg-emerald-950/60 px-2.5 sm:px-3 py-1 rounded-lg border border-amber-400/30 text-amber-200">
               <Smartphone className="w-3.5 h-3.5 text-amber-300" />
               <span className="text-[11px] text-emerald-200 font-medium">جوال الواتساب:</span>
               <span className="font-mono font-bold text-white text-xs dir-ltr">{schoolSettings.adminPhone}</span>
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="simulate-teacher-view-btn"
                 onClick={onOpenTeacherSimulator}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer text-xs"
+                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold px-2.5 sm:px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer text-xs"
                 title="معاينة شاشة المعلم وتجربة التوقيع بيدك"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -180,9 +180,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Stats Grid (Admin only) */}
           {isAdmin && (
-            <div className="flex flex-wrap items-center gap-2.5 text-xs w-full lg:w-auto justify-start lg:justify-end">
-              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-emerald-600 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-2xs">
-                <div className="w-6 h-6 rounded-lg bg-emerald-100/80 text-emerald-800 flex items-center justify-center">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 text-xs w-full lg:w-auto justify-start lg:justify-end">
+              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-emerald-600 rounded-xl px-2.5 sm:px-3 py-1.5 flex items-center gap-2 shadow-2xs">
+                <div className="w-6 h-6 rounded-lg bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
                   <Users className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -191,8 +191,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-teal-600 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-2xs">
-                <div className="w-6 h-6 rounded-lg bg-blue-100/80 text-blue-800 flex items-center justify-center">
+              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-teal-600 rounded-xl px-2.5 sm:px-3 py-1.5 flex items-center gap-2 shadow-2xs">
+                <div className="w-6 h-6 rounded-lg bg-blue-100/80 text-blue-800 flex items-center justify-center shrink-0">
                   <FileText className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -201,8 +201,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-amber-500 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-2xs">
-                <div className="w-6 h-6 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center">
+              <div className="bg-slate-50 border border-slate-200/90 border-r-4 border-r-amber-500 rounded-xl px-2.5 sm:px-3 py-1.5 flex items-center gap-2 shadow-2xs">
+                <div className="w-6 h-6 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -211,13 +211,15 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="bg-emerald-50/90 border border-emerald-200/90 border-r-4 border-r-emerald-700 rounded-xl px-2.5 py-1.5 flex items-center gap-2.5 shadow-2xs">
-                <CircularProgress
-                  percentage={completionRate}
-                  size={36}
-                  strokeWidth={3.5}
-                  textSizeClass="text-[9px] font-black"
-                />
+              <div className="bg-emerald-50/90 border border-emerald-200/90 border-r-4 border-r-emerald-700 rounded-xl px-2 sm:px-2.5 py-1.5 flex items-center gap-2 shadow-2xs">
+                <div className="shrink-0">
+                  <CircularProgress
+                    percentage={completionRate}
+                    size={32}
+                    strokeWidth={3.5}
+                    textSizeClass="text-[9px] font-black"
+                  />
+                </div>
                 <div>
                   <span className="text-emerald-800 block text-[9px] font-medium">نسبة التوقيع</span>
                   <span className="font-extrabold text-emerald-950 text-xs">{completionRate}% إجمالي</span>
