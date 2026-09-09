@@ -31,6 +31,7 @@ import { SignatureAuditModal } from './components/SignatureAuditModal';
 import { TeacherSimulatorModal } from './components/TeacherSimulatorModal';
 import { LoginView } from './components/LoginView';
 import { StaffPortalView } from './components/StaffPortalView';
+import { ChangePasscodeModal } from './components/ChangePasscodeModal';
 
 export default function App() {
   // Authentication State
@@ -45,6 +46,7 @@ export default function App() {
   // Interactive Modals
   const [auditDoc, setAuditDoc] = useState<DispatchedDocument | null>(null);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [isChangePasscodeModalOpen, setIsChangePasscodeModalOpen] = useState(false);
 
   // Active Direct Signing View (Personal Teacher View)
   const [activeSignDocId, setActiveSignDocId] = useState<string | null>(null);
@@ -159,6 +161,12 @@ export default function App() {
     saveSchoolSettings(newSettings);
   };
 
+  const handleUpdateAdminPassword = (newPassword: string) => {
+    const updatedSettings = { ...schoolSettings, adminPassword: newPassword };
+    setSchoolSettings(updatedSettings);
+    saveSchoolSettings(updatedSettings);
+  };
+
   const handleResetData = () => {
     resetToDefaults();
     setStaffList(loadStaffMembers());
@@ -191,6 +199,7 @@ export default function App() {
         schoolSettings={schoolSettings}
         staffList={staffList}
         onLoginSuccess={handleLoginSuccess}
+        onUpdateAdminPassword={handleUpdateAdminPassword}
       />
     );
   }
@@ -261,6 +270,7 @@ export default function App() {
         authSession={authSession}
         onLogout={handleLogout}
         onOpenTeacherSimulator={() => setIsSimulatorOpen(true)}
+        onOpenChangePasswordModal={() => setIsChangePasscodeModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -358,6 +368,17 @@ export default function App() {
           documents={documents}
           onOpenDocForStaff={handleOpenSignPortal}
           onClose={() => setIsSimulatorOpen(false)}
+        />
+      )}
+
+      {/* Admin Change Passcode Modal */}
+      {isChangePasscodeModalOpen && (
+        <ChangePasscodeModal
+          isOpen={isChangePasscodeModalOpen}
+          onClose={() => setIsChangePasscodeModalOpen(false)}
+          schoolSettings={schoolSettings}
+          onSavePassword={handleUpdateAdminPassword}
+          isLoggedInAdmin={true}
         />
       )}
 

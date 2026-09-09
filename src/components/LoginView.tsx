@@ -15,19 +15,23 @@ import {
 } from 'lucide-react';
 import { StaffMember, SchoolSettings, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
+import { ChangePasscodeModal } from './ChangePasscodeModal';
 
 interface LoginViewProps {
   schoolSettings: SchoolSettings;
   staffList: StaffMember[];
   onLoginSuccess: (session: AuthSession) => void;
+  onUpdateAdminPassword?: (newPassword: string) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
   schoolSettings,
   staffList,
   onLoginSuccess,
+  onUpdateAdminPassword,
 }) => {
   const [activeTab, setActiveTab] = useState<'staff' | 'admin'>('staff');
+  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
 
   // Staff login state
   const [nationalIdOrPhone, setNationalIdOrPhone] = useState('');
@@ -90,16 +94,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
     const u = adminUsername.trim().toLowerCase();
     const p = adminPassword.trim();
+    const targetAdminPass = schoolSettings.adminPassword || 'admin';
+    const targetAdminUser = (schoolSettings.adminUsername || 'admin').trim().toLowerCase();
 
     // Valid admin credentials:
-    // 1) admin / admin
-    // 2) principal's national ID / principal phone or pin
-    // 3) vice principal's national ID
-    const isMasterAdmin = (u === 'admin' && (p === 'admin' || p === '1234' || p === '1446' || p === '2030'));
+    // 1) Configured admin password or standard defaults
+    const isMasterAdmin = 
+      (u === 'admin' || u === targetAdminUser) && 
+      (p === targetAdminPass || (targetAdminPass === 'admin' && (p === 'admin' || p === '1234' || p === '1448' || p === '1446' || p === '2030')));
+
+    // 2) principal or vice principal login
     const isPrincipal = staffList.some(s => 
       (s.role === 'principal' || s.role === 'vice_principal') && 
       (s.nationalId === u || s.phone.endsWith(u)) &&
-      (p === s.pin || p === s.nationalId.slice(-4) || p === 'admin')
+      (p === s.pin || p === s.nationalId.slice(-4) || p === targetAdminPass || p === 'admin')
     );
 
     if (isMasterAdmin || isPrincipal) {
@@ -109,7 +117,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         loginAt: new Date().toISOString(),
       });
     } else {
-      setAdminError('بيانات الدخول غير صحيحة. يمكنك استخدام: اسم المستخدم (admin) وكلمة المرور (admin)');
+      setAdminError(`بيانات الدخول غير صحيحة. يرجى إدخال اسم المستخدم ورمز الدخول المعتمد (${targetAdminPass !== 'admin' ? 'تم تخصيص رمز خاص' : 'الافتراضي: admin'}). يمكنك تغيير أو استعادة الرمز من الرابط أدناه.`);
     }
   };
 
@@ -374,15 +382,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                      كلمة المرور:
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-800">
+                        كلمة المرور / رمز الدخول:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsChangePassModalOpen(true)}
+                        className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        title="تغيير أو إعادة ضبط رمز الدخول للإدارة"
+                      >
+                        <KeyRound className="w-3 h-3 text-emerald-600" />
+                        <span>تغيير رمز الدخول</span>
+                      </button>
+                    </div>
                     <div className="relative">
                       <input
                         type="password"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="admin"
+                        placeholder={schoolSettings.adminPassword || "admin"}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-500/20 focus:border-slate-700 outline-none text-xs sm:text-sm font-mono font-bold text-slate-900"
                         dir="ltr"
                         required
@@ -399,10 +418,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ArrowLeft className="w-4 h-4" />
                   </button>
 
-                  <div className="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-slate-800 rounded-xl text-center text-xs text-slate-600">
-                    <span className="font-bold text-slate-800">بيانات الدخول التجريبية للإدارة:</span>
-                    <p className="font-mono text-slate-700 mt-0.5">
-                      المستخدم: <strong>admin</strong> | كلمة المرور: <strong>admin</strong>
+                  <div className="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-slate-800 rounded-xl text-xs text-slate-600 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">بيانات الدخول لإدارة المجمع:</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsChangePassModalOpen(true)}
+                        className="text-[11px] text-emerald-700 hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>تغيير الرمز</span>
+                      </button>
+                    </div>
+                    <p className="font-mono text-slate-700 text-[11px] sm:text-xs">
+                      المستخدم: <strong>admin</strong> | رمز المرور: <strong>{schoolSettings.adminPassword || 'admin'}</strong>
                     </p>
                   </div>
                 </form>
@@ -418,6 +447,22 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         </div>
       </div>
+
+      {/* Change Passcode Modal */}
+      {isChangePassModalOpen && (
+        <ChangePasscodeModal
+          isOpen={isChangePassModalOpen}
+          onClose={() => setIsChangePassModalOpen(false)}
+          schoolSettings={schoolSettings}
+          onSavePassword={(newPass) => {
+            if (onUpdateAdminPassword) {
+              onUpdateAdminPassword(newPass);
+            }
+            setAdminPassword(newPass);
+          }}
+          isLoggedInAdmin={false}
+        />
+      )}
 
       {/* Bottom Full-Width Footer */}
       <footer className="bg-white border-t border-slate-200 py-3.5 text-xs text-slate-500 px-4 sm:px-8">

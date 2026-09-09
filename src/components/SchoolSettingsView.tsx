@@ -8,7 +8,11 @@ import {
   ShieldCheck, 
   Send,
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { SchoolSettings } from '../types';
 import { formatSaudiPhone } from '../utils/whatsapp';
@@ -25,8 +29,48 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
   onSaveSettings,
   onResetToDefaults,
 }) => {
-  const [formData, setFormData] = useState<SchoolSettings>({ ...settings });
+  const [formData, setFormData] = useState<SchoolSettings>({ 
+    ...settings,
+    adminPassword: settings.adminPassword || 'admin',
+    adminUsername: settings.adminUsername || 'admin'
+  });
   const [isSaved, setIsSaved] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [newPassInput, setNewPassInput] = useState('');
+  const [confirmPassInput, setConfirmPassInput] = useState('');
+  const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState(false);
+
+  const handleUpdatePassword = () => {
+    setPassError('');
+    const cleanNew = newPassInput.trim();
+    if (!cleanNew || cleanNew.length < 4) {
+      setPassError('فضلاً أدخل رمز دخول لا يقل عن 4 خانات');
+      return;
+    }
+    if (cleanNew !== confirmPassInput.trim()) {
+      setPassError('الرمز الجديد غير متطابق مع حقل التأكيد');
+      return;
+    }
+
+    const updated = { ...formData, adminPassword: cleanNew };
+    setFormData(updated);
+    onSaveSettings(updated);
+    setPassSuccess(true);
+    setNewPassInput('');
+    setConfirmPassInput('');
+    setTimeout(() => setPassSuccess(false), 3000);
+  };
+
+  const handleResetPasswordDefault = () => {
+    if (confirm('هل ترغب في إعادة رمز الدخول إلى القيمة الافتراضية (admin)؟')) {
+      const updated = { ...formData, adminPassword: 'admin' };
+      setFormData(updated);
+      onSaveSettings(updated);
+      setPassSuccess(true);
+      setTimeout(() => setPassSuccess(false), 3000);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,39 +195,39 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block font-bold text-slate-800">العام الدراسي *</label>
                 <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
-                  العام الحالي المعتمد: 1446هـ
+                  العام الحالي المعتمد: 1448هـ
                 </span>
               </div>
               <input
                 type="text"
                 value={formData.academicYear}
                 onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-                placeholder="1446هـ"
+                placeholder="1448هـ"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none font-semibold text-slate-900"
               />
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className="text-xs text-slate-500 font-medium">خيارات سريعة:</span>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, academicYear: '1446هـ' })}
+                  onClick={() => setFormData({ ...formData, academicYear: '1448هـ' })}
                   className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
-                    formData.academicYear === '1446هـ'
+                    formData.academicYear === '1448هـ'
                       ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
                       : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                   }`}
                 >
-                  1446هـ (المعتمد)
+                  1448هـ (المعتمد)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, academicYear: '1446 - 1447هـ' })}
+                  onClick={() => setFormData({ ...formData, academicYear: '1448 - 1449هـ' })}
                   className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
-                    formData.academicYear === '1446 - 1447هـ'
+                    formData.academicYear === '1448 - 1449هـ'
                       ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
                       : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                   }`}
                 >
-                  1446 - 1447هـ
+                  1448 - 1449هـ
                 </button>
               </div>
             </div>
@@ -202,6 +246,131 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
               />
             </div>
           )}
+
+          {/* System Security & Access Passcode Section */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-md space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm sm:text-base text-white flex items-center gap-2">
+                      <span>رمز الدخول وكلمة مرور إدارة المنظومة</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
+                        حماية لوحة التحكم
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      تخصيص الرمز السري المستخدم في تسجيل دخول إدارة المجمع (المدير والوكلاء) لإصدار التعاميم ومتابعة التواقيع
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                  <span className="text-xs text-slate-300">الرمز المعتمد حالياً:</span>
+                  <span className="font-mono font-black text-amber-300 tracking-wider text-xs">
+                    {showPass ? (formData.adminPassword || 'admin') : '••••••••'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="text-slate-400 hover:text-white mr-1 cursor-pointer"
+                    title={showPass ? 'إخفاء الرمز' : 'إظهار الرمز الحالي'}
+                  >
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {passSuccess && (
+                <div className="p-3 bg-emerald-900/80 border border-emerald-500 text-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>تم تحديث وحفظ رمز الدخول للمنظومة بنجاح! يمكنك استخدامه الآن في تسجيل الدخول.</span>
+                </div>
+              )}
+
+              {passError && (
+                <div className="p-3 bg-rose-950/80 border border-rose-500 text-rose-200 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{passError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    رمز الدخول الجديد (PIN أو كلمة مرور):
+                  </label>
+                  <input
+                    type="text"
+                    value={newPassInput}
+                    onChange={(e) => setNewPassInput(e.target.value)}
+                    placeholder="مثال: 1448 أو 2030 أو رمز مخصص"
+                    className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none text-xs sm:text-sm font-mono font-bold text-white dir-ltr text-right"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    تأكيد رمز الدخول الجديد:
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmPassInput}
+                    onChange={(e) => setConfirmPassInput(e.target.value)}
+                    placeholder="أعد كتابة الرمز للتأكيد"
+                    className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none text-xs sm:text-sm font-mono font-bold text-white dir-ltr text-right"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Suggestion Pills & Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-slate-400">نماذج سريعة:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPassInput('1448');
+                      setConfirmPassInput('1448');
+                    }}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg border border-slate-700 font-mono text-[11px] transition-colors cursor-pointer"
+                  >
+                    1448 (العام الحالي)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPassInput('2030');
+                      setConfirmPassInput('2030');
+                    }}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg border border-slate-700 font-mono text-[11px] transition-colors cursor-pointer"
+                  >
+                    2030 (رؤية 2030)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetPasswordDefault}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 rounded-lg border border-slate-700 text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>إرجاع admin</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleUpdatePassword}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-5 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>تحديث رمز الدخول</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Action Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 border-t border-slate-100">

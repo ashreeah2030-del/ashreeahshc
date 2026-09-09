@@ -12,7 +12,9 @@ import {
   X,
   UserCheck,
   GraduationCap,
-  Briefcase
+  Briefcase,
+  KeyRound,
+  RotateCcw
 } from 'lucide-react';
 import { StaffMember, SchoolStage, StaffRole } from '../types';
 import { formatSaudiPhone, formatDisplayPhone } from '../utils/whatsapp';
@@ -53,6 +55,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
     stage: 'all' as SchoolStage,
     subject: '',
     notes: '',
+    pin: '',
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -90,6 +93,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       stage: 'all',
       subject: '',
       notes: '',
+      pin: '',
     });
     setFormErrors({});
     setIsAddModalOpen(true);
@@ -106,6 +110,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       stage: staff.stage,
       subject: staff.subject || '',
       notes: staff.notes || '',
+      pin: staff.pin || staff.nationalId.slice(-4),
     });
     setFormErrors({});
   };
@@ -131,6 +136,10 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       errors.roleTitle = 'المسمى الوظيفي مطلوب';
     }
 
+    if (formData.pin && formData.pin.trim().length < 4) {
+      errors.pin = 'يجب ألا يقل رمز الدخول السري (PIN) عن 4 أرقام';
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -138,6 +147,8 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   const handleSaveStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    const finalPin = formData.pin.trim() || formData.nationalId.trim().slice(-4);
 
     if (editingStaff) {
       onUpdateStaff({
@@ -150,6 +161,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
         stage: formData.stage,
         subject: formData.subject.trim(),
         notes: formData.notes.trim(),
+        pin: finalPin,
       });
       setEditingStaff(null);
     } else {
@@ -163,6 +175,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
         subject: formData.subject.trim(),
         notes: formData.notes.trim(),
         active: true,
+        pin: finalPin,
       });
       setIsAddModalOpen(false);
     }
@@ -647,6 +660,44 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                   placeholder="مثال: منسق الجودة، مسؤول منصة مدرستي..."
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none"
                 />
+              </div>
+
+              {/* Staff Access PIN */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>رمز الدخول السري للموظف (PIN للمنظومة)</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    افتراضياً: آخر 4 أرقام من السجل المدني
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={formData.pin}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/[^0-9a-zA-Z]/g, '') })}
+                    placeholder={formData.nationalId ? formData.nationalId.slice(-4) : "مثال: 1923"}
+                    className="w-full px-3 py-2 font-mono font-bold bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm dir-ltr text-right"
+                  />
+                  {formData.nationalId && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, pin: formData.nationalId.slice(-4) })}
+                      className="shrink-0 px-2.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                      title="إعادة تعيين الرمز السري إلى آخر 4 أرقام من السجل المدني"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>استعادة الافتراضي</span>
+                    </button>
+                  )}
+                </div>
+                {formErrors.pin && <p className="text-red-500 text-xs font-medium">{formErrors.pin}</p>}
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  يستخدمه المعلم أو الإداري لتسجيل الدخول إلى بوابته الخاصة واستعراض التعاميم وتوقيع أوراق المساءلة.
+                </p>
               </div>
 
               {/* Buttons */}

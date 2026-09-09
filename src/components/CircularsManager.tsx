@@ -63,10 +63,12 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
   const [saveTemplateCategory, setSaveTemplateCategory] = useState<CircularTemplate['category']>('انضباط ودوام');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
 
+  const currentYearDigits = schoolSettings.academicYear.replace(/[^0-9]/g, '') || '1448';
+
   // Form State for new circular
   const [title, setTitle] = useState('');
-  const [circularNumber, setCircularNumber] = useState(`1446/${Math.floor(100 + Math.random() * 900)}`);
-  const [hijriDate, setHijriDate] = useState('25 صفر 1446هـ');
+  const [circularNumber, setCircularNumber] = useState(`${currentYearDigits}/${Math.floor(100 + Math.random() * 900)}`);
+  const [hijriDate, setHijriDate] = useState(`25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`);
   const [priority, setPriority] = useState<'normal' | 'urgent' | 'top_urgent'>('urgent');
   const [targetAudience, setTargetAudience] = useState<'all' | 'teachers' | 'admins' | 'elementary' | 'intermediate' | 'secondary' | 'custom'>('all');
   const [customStaffIds, setCustomStaffIds] = useState<string[]>([]);
@@ -241,7 +243,8 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
           <button
             id="btn-create-new-circular"
             onClick={() => {
-              setCircularNumber(`1446/${Math.floor(100 + Math.random() * 900)}`);
+              setCircularNumber(`${currentYearDigits}/${Math.floor(100 + Math.random() * 900)}`);
+              setHijriDate(`25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`);
               setIsNewModalOpen(true);
             }}
             className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-colors cursor-pointer"
@@ -577,7 +580,7 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
                     value={circularNumber}
                     onChange={(e) => setCircularNumber(e.target.value)}
                     className="w-full px-3 py-2 font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none"
-                    placeholder="1446/105"
+                    placeholder={`${currentYearDigits}/105`}
                   />
                 </div>
                 <div>
@@ -587,7 +590,7 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
                     value={hijriDate}
                     onChange={(e) => setHijriDate(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none"
-                    placeholder="25 صفر 1446هـ"
+                    placeholder={`25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`}
                   />
                 </div>
                 <div>

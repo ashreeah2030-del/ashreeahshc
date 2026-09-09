@@ -36,11 +36,13 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
   onOpenSignPortal,
   onOpenAuditModal,
 }) => {
+  const currentYearDigits = schoolSettings.academicYear.replace(/[^0-9]/g, '') || '1448';
+
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [reasonType, setReasonType] = useState<InquiryReason>('lateness');
-  const [inquiryNumber, setInquiryNumber] = useState(`م/1446/${Math.floor(400 + Math.random() * 500)}`);
-  const [hijriDate, setHijriDate] = useState('25 صفر 1446هـ');
+  const [inquiryNumber, setInquiryNumber] = useState(`م/${currentYearDigits}/${Math.floor(400 + Math.random() * 500)}`);
+  const [hijriDate, setHijriDate] = useState(`25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`);
   const [incidentDate, setIncidentDate] = useState(new Date().toISOString().slice(0, 10));
   const [incidentTimeOrPeriods, setIncidentTimeOrPeriods] = useState('الحصة الأولى (الساعة 7:00 صباحاً)');
   const [details, setDetails] = useState('');
@@ -154,7 +156,8 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
         <button
           id="btn-issue-new-inquiry"
           onClick={() => {
-            setInquiryNumber(`م/1446/${Math.floor(400 + Math.random() * 500)}`);
+            setInquiryNumber(`م/${currentYearDigits}/${Math.floor(400 + Math.random() * 500)}`);
+            setHijriDate(`25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`);
             setSelectedStaffId(staffList[0]?.id || '');
             handleReasonChange('lateness');
             setIsNewModalOpen(true);
@@ -435,7 +438,7 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
                     value={hijriDate}
                     onChange={(e) => setHijriDate(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 outline-none"
-                    placeholder="مثال: 25 صفر 1446هـ"
+                    placeholder={`مثال: 25 ربيع الأول ${schoolSettings.academicYear || '1448هـ'}`}
                   />
                 </div>
 

@@ -189,7 +189,7 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({
       const signed = Object.keys(doc.signatures).length;
       const rate = total > 0 ? Math.round((signed / total) * 100) : 100;
       
-      const shortRef = doc.referenceNumber ? doc.referenceNumber.replace(/^1446\//, '#') : `وثيقة ${index + 1}`;
+      const shortRef = doc.referenceNumber ? doc.referenceNumber.replace(/^(م\/)?144[0-9]\//, '#') : `وثيقة ${index + 1}`;
       const shortTitle = doc.title.length > 25 ? doc.title.slice(0, 25) + '...' : doc.title;
 
       return {

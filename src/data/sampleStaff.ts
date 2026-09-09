@@ -8,7 +8,9 @@ export const DEFAULT_SCHOOL_SETTINGS: SchoolSettings = {
   vicePrincipalName: "أ. صالح بن فهد الحربي",
   educationDepartment: "الإدارة العامة للتعليم بجازان",
   officeName: "",
-  academicYear: "1446هـ",
+  academicYear: "1448هـ",
+  adminPassword: "admin",
+  adminUsername: "admin",
 };
 
 export const INITIAL_STAFF_MEMBERS: StaffMember[] = [
@@ -43,16 +45,16 @@ export const INITIAL_DISPATCHED_DOCUMENTS: DispatchedDocument[] = [
   {
     id: "doc-cir-101",
     type: "circular",
-    title: "تعميم رقم 1446/101: بشأن الانضباط المدرسي والإشراف اليومي والمناوبة",
-    referenceNumber: "1446/101",
-    date: "2024-09-06",
-    hijriDate: "24 صفر 1446هـ",
+    title: "تعميم رقم 1448/101: بشأن الانضباط المدرسي والإشراف اليومي والمناوبة",
+    referenceNumber: "1448/101",
+    date: "2026-09-08",
+    hijriDate: "25 ربيع الأول 1448هـ",
     createdAt: new Date().toISOString(),
     circularData: {
-      circularNumber: "1446/101",
+      circularNumber: "1448/101",
       title: "بشأن الانضباط المدرسي والإشراف اليومي والمناوبة الصباحية والانصراف",
-      date: "2024-09-06",
-      hijriDate: "24 صفر 1446هـ",
+      date: "2026-09-08",
+      hijriDate: "25 ربيع الأول 1448هـ",
       priority: "urgent",
       targetAudience: "all",
       instructions: "نأمل من جميع الزملاء المعلمين والإداريين الاطلاع والتوقيع بالعلم والالتزام بجدول المناوبة المعتمد وعدم مغادرة المدرسة إلا بعد خروج آخر طالب.",
@@ -76,7 +78,7 @@ export const INITIAL_DISPATCHED_DOCUMENTS: DispatchedDocument[] = [
         nationalId: "1039485721",
         phone: "0559876543",
         signedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        formattedDate: "1446/02/24 09:15 ص",
+        formattedDate: "1448/03/25 09:15 ص",
         signatureImage: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='70'><path d='M15,50 Q60,15 110,45 T170,20 Q190,55 195,35' fill='none' stroke='%231b4332' stroke-width='3'/></svg>",
         responseText: "تم العلم والاطلاع والتقيد بجدول المناوبة والإشراف.",
         status: "signed",

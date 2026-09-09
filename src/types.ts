@@ -107,6 +107,8 @@ export interface SchoolSettings {
   educationDepartment: string;
   officeName: string;
   academicYear: string;
+  adminPassword?: string; // رمز الدخول السري لإدارة المنظومة (افتراضياً: admin)
+  adminUsername?: string; // اسم مستخدم الإدارة (افتراضياً: admin)
 }
 
 export interface CircularTemplate {

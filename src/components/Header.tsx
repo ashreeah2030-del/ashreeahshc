@@ -13,7 +13,8 @@ import {
   UserCheck,
   Lock,
   User,
-  BarChart3
+  BarChart3,
+  KeyRound
 } from 'lucide-react';
 import { SchoolSettings, StaffMember, DispatchedDocument, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
@@ -28,6 +29,7 @@ interface HeaderProps {
   authSession: AuthSession | null;
   onLogout: () => void;
   onOpenTeacherSimulator: () => void;
+  onOpenChangePasswordModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,7 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   documents,
   authSession,
   onLogout,
-  onOpenTeacherSimulator
+  onOpenTeacherSimulator,
+  onOpenChangePasswordModal
 }) => {
   // Statistics
   const totalStaff = staffList.length;
@@ -109,6 +112,19 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[11px] text-emerald-300/90 font-medium">جوال الواتساب:</span>
               <span className="font-mono font-bold text-white text-xs dir-ltr">{schoolSettings.adminPhone}</span>
             </div>
+
+            {isAdmin && onOpenChangePasswordModal && (
+              <button
+                type="button"
+                id="header-change-passcode-btn"
+                onClick={onOpenChangePasswordModal}
+                className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-400/40 text-xs font-bold transition-all shadow-2xs cursor-pointer hover:border-amber-400"
+                title="تغيير رمز الدخول السري لإدارة المنظومة"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>تغيير رمز الدخول</span>
+              </button>
+            )}
 
             {isAdmin && (
               <button

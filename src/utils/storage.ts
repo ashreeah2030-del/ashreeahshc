@@ -123,24 +123,53 @@ export function loadDocuments(): DispatchedDocument[] {
           })
           .map((doc: DispatchedDocument) => {
             let docCopy = { ...doc };
-            if (docCopy.hijriDate && docCopy.hijriDate.includes('1448')) {
-              docCopy.hijriDate = docCopy.hijriDate.replace(/1448/g, '1446');
+            if (docCopy.hijriDate && docCopy.hijriDate.includes('1446')) {
+              docCopy.hijriDate = docCopy.hijriDate.replace(/1446/g, '1448');
               docsChanged = true;
             }
-            if (docCopy.circularData && docCopy.circularData.hijriDate?.includes('1448')) {
-              docCopy.circularData = {
-                ...docCopy.circularData,
-                hijriDate: docCopy.circularData.hijriDate.replace(/1448/g, '1446')
-              };
+            if (docCopy.referenceNumber && docCopy.referenceNumber.includes('1446/')) {
+              docCopy.referenceNumber = docCopy.referenceNumber.replace(/1446\//g, '1448/');
               docsChanged = true;
             }
-            if (docCopy.inquiryData && docCopy.inquiryData.hijriDate?.includes('1448')) {
-              docCopy.inquiryData = {
-                ...docCopy.inquiryData,
-                hijriDate: docCopy.inquiryData.hijriDate.replace(/1448/g, '1446'),
-                details: docCopy.inquiryData.details ? docCopy.inquiryData.details.replace(/1448/g, '1446') : docCopy.inquiryData.details
-              };
+            if (docCopy.title && docCopy.title.includes('1446/')) {
+              docCopy.title = docCopy.title.replace(/1446\//g, '1448/');
               docsChanged = true;
+            }
+            if (docCopy.circularData) {
+              let circChanged = false;
+              let updatedCirc = { ...docCopy.circularData };
+              if (updatedCirc.hijriDate?.includes('1446')) {
+                updatedCirc.hijriDate = updatedCirc.hijriDate.replace(/1446/g, '1448');
+                circChanged = true;
+              }
+              if (updatedCirc.circularNumber?.includes('1446/')) {
+                updatedCirc.circularNumber = updatedCirc.circularNumber.replace(/1446\//g, '1448/');
+                circChanged = true;
+              }
+              if (circChanged) {
+                docCopy.circularData = updatedCirc;
+                docsChanged = true;
+              }
+            }
+            if (docCopy.inquiryData) {
+              let inqChanged = false;
+              let updatedInq = { ...docCopy.inquiryData };
+              if (updatedInq.hijriDate?.includes('1446')) {
+                updatedInq.hijriDate = updatedInq.hijriDate.replace(/1446/g, '1448');
+                inqChanged = true;
+              }
+              if (updatedInq.inquiryNumber?.includes('1446/')) {
+                updatedInq.inquiryNumber = updatedInq.inquiryNumber.replace(/1446\//g, '1448/');
+                inqChanged = true;
+              }
+              if (updatedInq.details?.includes('1446')) {
+                updatedInq.details = updatedInq.details.replace(/1446/g, '1448');
+                inqChanged = true;
+              }
+              if (inqChanged) {
+                docCopy.inquiryData = updatedInq;
+                docsChanged = true;
+              }
             }
             // Filter targetStaffIds to remove old deleted dummy staff
             if (docCopy.targetStaffIds && docCopy.targetStaffIds.some(id => {
@@ -165,7 +194,12 @@ export function loadDocuments(): DispatchedDocument[] {
                 if (!isNaN(num) && num >= 3 && num <= 20) {
                   sigsChanged = true;
                 } else {
-                  cleanedSigs[key] = sig;
+                  let updatedSig = { ...sig };
+                  if (updatedSig.formattedDate && updatedSig.formattedDate.includes('1446/')) {
+                    updatedSig.formattedDate = updatedSig.formattedDate.replace(/1446\//g, '1448/');
+                    sigsChanged = true;
+                  }
+                  cleanedSigs[key] = updatedSig;
                 }
               });
               if (sigsChanged) {
@@ -176,7 +210,7 @@ export function loadDocuments(): DispatchedDocument[] {
                     nationalId: '1039485721',
                     phone: '0559876543',
                     signedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-                    formattedDate: '1446/02/24 09:15 ص',
+                    formattedDate: '1448/03/25 09:15 ص',
                     signatureImage: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='70'><path d='M15,50 Q60,15 110,45 T170,20 Q190,55 195,35' fill='none' stroke='%231b4332' stroke-width='3'/></svg>",
                     responseText: 'تم العلم والاطلاع والتقيد بجدول المناوبة والإشراف.',
                     status: 'signed',
@@ -231,15 +265,17 @@ export function loadSchoolSettings(): SchoolSettings {
         parsed.principalName = DEFAULT_SCHOOL_SETTINGS.principalName;
         changed = true;
       }
-      // Auto-migrate academicYear to current official year (1446هـ) if old or containing 1448 or 1446-1447هـ
+      // Auto-migrate academicYear to current official year (1448هـ)
       if (
         !parsed.academicYear || 
+        parsed.academicYear === '1446هـ' ||
         parsed.academicYear === '1446-1447هـ' || 
-        parsed.academicYear.includes('1448') || 
+        parsed.academicYear === '1446 - 1447هـ' || 
+        parsed.academicYear.includes('1446') || 
         parsed.academicYear.includes('1445') || 
         parsed.academicYear.includes('1444')
       ) {
-        parsed.academicYear = DEFAULT_SCHOOL_SETTINGS.academicYear; // "1446هـ"
+        parsed.academicYear = DEFAULT_SCHOOL_SETTINGS.academicYear; // "1448هـ"
         changed = true;
       }
       if (changed) {
