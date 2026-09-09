@@ -156,6 +156,7 @@ function detectColumns(headers: string[]): ColumnIndices {
        header.includes('المدني') || 
        header.includes('رقم المستخدم') ||
        header.includes('اسم المستخدم') ||
+       header.includes('الأحوال') ||
        header.toLowerCase().includes('national') ||
        header.toLowerCase().includes('iqama') ||
        header.toLowerCase().includes('identity'))
@@ -169,6 +170,7 @@ function detectColumns(headers: string[]): ColumnIndices {
        header.includes('اسم المعلم') || 
        header.includes('اسم الموظف') || 
        header.includes('شاغل الوظيفة') || 
+       header.includes('اسم شاغل') ||
        header.toLowerCase().includes('name'))
     ) {
       indices.nameCol = idx;
@@ -181,6 +183,7 @@ function detectColumns(headers: string[]): ColumnIndices {
        header.includes('هاتف') || 
        header.includes('الهاتف') || 
        header.includes('محمول') || 
+       header.includes('الاتصال') ||
        header.toLowerCase().includes('phone') || 
        header.toLowerCase().includes('mobile'))
     ) {
@@ -195,6 +198,7 @@ function detectColumns(headers: string[]): ColumnIndices {
        header.includes('الصفة') || 
        header.includes('المسمى') || 
        header.includes('الرتبة') || 
+       header.includes('المرتبة') || 
        header.toLowerCase().includes('role') || 
        header.toLowerCase().includes('job'))
     ) {
@@ -205,6 +209,7 @@ function detectColumns(headers: string[]): ColumnIndices {
       indices.stageCol === -1 &&
       (header.includes('مرحلة') || 
        header.includes('المرحلة') || 
+       header.includes('المدرسة') ||
        header.toLowerCase().includes('stage'))
     ) {
       indices.stageCol = idx;
@@ -223,7 +228,7 @@ function detectColumns(headers: string[]): ColumnIndices {
     // Notes check
     else if (
       indices.notesCol === -1 &&
-      (header.includes('ملاحظ') || header.toLowerCase().includes('note'))
+      (header.includes('ملاحظ') || header.includes('البيان') || header.toLowerCase().includes('note'))
     ) {
       indices.notesCol = idx;
     }
@@ -325,17 +330,18 @@ export function parseNoorMatrix(
       validationErrors.push('رقم السجل المدني يجب أن يتكون من 10 أرقام');
     }
     if (!phone || phone.length < 9) {
-      validationErrors.push('رقم الجوال مفقود أو غير مكتمل');
+      validationErrors.push('رقم الجوال بحاجة لإدخال (05xxxxxxxx)');
     }
 
-    const isValid = validationErrors.length === 0;
+    // A record is valid for import if name and 10-digit national ID are present
+    const isValid = Boolean(rawName && rawName.length >= 3 && nationalId && nationalId.length === 10);
     const isExisting = Boolean(nationalId && existingIdsMap.has(nationalId));
 
     parsedStaff.push({
       tempId: `import-${r}-${Date.now()}`,
       name: rawName || 'موظف بدون اسم',
       nationalId: nationalId || rawId,
-      phone: phone.startsWith('05') ? phone : (phone ? `0${phone}` : '0500000000'),
+      phone: phone.startsWith('05') ? phone : (phone ? `0${phone}` : ''),
       role,
       roleTitle,
       stage,
@@ -463,10 +469,9 @@ export function downloadNoorExcelTemplate(): void {
   ];
 
   const sampleRows = [
-    ['محمد بن عبدالله القحطاني', '1098765432', '0501234567', 'معلم رياضيات', 'ثانوي', 'رياضيات', 'مجمع الشريعة'],
-    ['سلطان بن عبدالعزيز الغامدي', '1087654321', '0559876543', 'معلم لغة عربية', 'متوسط', 'لغة عربية', 'منسق النشاط'],
-    ['فهد بن إبراهيم الحربي', '1076543210', '0543210987', 'وكيل شؤون المعلمين', 'مشترك', 'إدارة مدرسية', 'وكيل المجمع'],
-    ['عبدالرحمن بن خالد الدوسري', '1065432109', '0533344455', 'محضر مختبر', 'ثانوي', 'علوم', 'المختبر المدرسي'],
+    ['(مثال توضيحي) اسم المعلم الرباعي', '1012345678', '0501234567', 'معلم', 'ثانوي', 'رياضيات', 'مجمع الشريعة التعليمي'],
+    ['(مثال توضيحي) اسم الإداري أو الوكيل', '1023456789', '0551234567', 'وكيل شؤون المعلمين', 'مشترك', 'إدارة مدرسية', ''],
+    ['(مثال توضيحي) اسم الموجه الطلابي', '1034567890', '0541234567', 'موجه طلابي', 'متوسط', 'توجيه طلابي', ''],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);

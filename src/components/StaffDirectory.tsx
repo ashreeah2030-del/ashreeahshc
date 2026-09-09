@@ -14,17 +14,25 @@ import {
   GraduationCap,
   Briefcase,
   KeyRound,
-  RotateCcw
+  RotateCcw,
+  FileSpreadsheet,
+  AlertTriangle,
+  CheckCircle2,
+  Building2,
+  Sparkles
 } from 'lucide-react';
 import { StaffMember, SchoolStage, StaffRole } from '../types';
 import { formatSaudiPhone, formatDisplayPhone } from '../utils/whatsapp';
+import { NoorImportModal } from './NoorImportModal';
+import { downloadNoorExcelTemplate } from '../utils/noorParser';
 
 interface StaffDirectoryProps {
   staffList: StaffMember[];
   onAddStaff: (staff: Omit<StaffMember, 'id'>) => void;
   onUpdateStaff: (staff: StaffMember) => void;
   onDeleteStaff: (staffId: string) => void;
-  onBulkImport: (staffMembers: Omit<StaffMember, 'id'>[]) => void;
+  onBulkImport: (staffMembers: Omit<StaffMember, 'id'>[], updateExisting?: boolean) => void;
+  onClearAllStaff?: () => void;
 }
 
 export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
@@ -33,6 +41,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   onUpdateStaff,
   onDeleteStaff,
   onBulkImport,
+  onClearAllStaff,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'teacher' | 'admin'>('all');
@@ -41,7 +50,11 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [staffToDelete, setStaffToDelete] = useState<StaffMember | null>(null);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isNoorModalOpen, setIsNoorModalOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importNotice, setImportNotice] = useState<string | null>(null);
 
@@ -270,6 +283,65 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Feedback Toast / Notice */}
+      {feedbackNotice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between text-xs sm:text-sm text-emerald-900 font-bold shadow-xs animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{feedbackNotice}</span>
+          </div>
+          <button
+            onClick={() => setFeedbackNotice(null)}
+            className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Noor Excel Import Action Banner */}
+      <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-700/60">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-300 border border-white/20 shrink-0 shadow-inner">
+            <FileSpreadsheet className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                استيراد كشف شاغلي الوظائف التعليمية والإدارية من نظام نور
+              </h3>
+              <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
+                Excel (.xlsx / .xls)
+              </span>
+            </div>
+            <p className="text-xs text-emerald-100/90 mt-1">
+              مجمع الشريعة التعليمي للبنين (رمز 432109) • استورد بيانات المعلمين والإداريين مباشرة من ملف إكسل المصدر من نور.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+          <button
+            id="quick-fetch-noor-btn"
+            onClick={() => setIsNoorModalOpen(true)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs sm:text-sm font-black px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Upload className="w-4 h-4 text-slate-950" />
+            <span>استيراد ملف إكسل نور</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={downloadNoorExcelTemplate}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer border border-white/15"
+            title="تحميل نموذج إكسل جاهز للتعبئة متوافق مع نظام نور"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-300" />
+            <span>تحميل نموذج إكسل</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Action & Search Bar */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 border-r-4 border-r-emerald-600 shadow-xs">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
@@ -297,33 +369,46 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
-              id="add-new-staff-btn"
-              onClick={openAddModal}
-              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-colors cursor-pointer"
+              id="bulk-import-noor-btn"
+              onClick={() => setIsNoorModalOpen(true)}
+              className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer border border-emerald-700 hover:shadow-md"
+              title="استيراد بيانات شاغلي الوظائف التعليمية والإدارية من ملف إكسل نظام نور"
             >
-              <Plus className="w-4 h-4" />
-              <span>إضافة موظف جديد</span>
+              <FileSpreadsheet className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span>استيراد ملف إكسل نور</span>
             </button>
 
             <button
-              id="bulk-import-staff-btn"
-              onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
-              title="استيراد جماعي لقائمة المعلمين والإداريين"
+              id="add-new-staff-btn"
+              onClick={openAddModal}
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              <Upload className="w-4 h-4 text-slate-600" />
-              <span>استيراد جماعي</span>
+              <Plus className="w-4 h-4" />
+              <span>إضافة موظف فردي</span>
             </button>
 
             <button
               id="export-staff-btn"
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
+              disabled={staffList.length === 0}
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
               title="تصدير كشف الموظفين كملف Excel"
             >
               <Download className="w-4 h-4 text-slate-600" />
               <span>تصدير Excel</span>
             </button>
+
+            {staffList.length > 0 && onClearAllStaff && (
+              <button
+                id="clear-all-staff-btn"
+                onClick={() => setShowClearConfirmModal(true)}
+                className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
+                title="تفريغ وحذف جميع الموظفين من السجل"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>تفريغ السجل (حذف الكل)</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -378,145 +463,182 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
         </div>
       </div>
 
-      {/* Staff Table / Cards */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 border-r-4 border-r-emerald-600 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse text-xs sm:text-sm">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
-                <th className="py-3.5 px-4">#</th>
-                <th className="py-3.5 px-4">اسم الموظف الرباعي</th>
-                <th className="py-3.5 px-4">السجل المدني (الوطني)</th>
-                <th className="py-3.5 px-4">رقم الجوال</th>
-                <th className="py-3.5 px-4">المسمى الوظيفي / التخصص</th>
-                <th className="py-3.5 px-4">المرحلة</th>
-                <th className="py-3.5 px-4 text-center">التواصل والعمليات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredStaff.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <UserCheck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                    <p className="font-semibold text-slate-600">لم يتم العثور على موظفين يطابقون البحث</p>
-                    <p className="text-xs text-slate-400 mt-1">تأكد من كتابة الاسم أو رقم السجل المدني بشكل صحيح</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredStaff.map((staff, idx) => {
-                  const isTeacher = staff.role === 'teacher';
-                  return (
-                    <tr key={staff.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-slate-400 text-xs">
-                        {idx + 1}
-                      </td>
+      {/* Staff Table / Cards / Empty State */}
+      {staffList.length === 0 ? (
+        <div className="bg-white rounded-3xl border-2 border-dashed border-emerald-300 p-8 sm:p-14 text-center shadow-xs">
+          <div className="w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-4 shadow-inner">
+            <FileSpreadsheet className="w-10 h-10" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+            سجل الموظفين فارغ - بانتظار استيراد ملف إكسل من نظام نور
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto mb-6 leading-relaxed">
+            تم تفريغ كافة الموظفين غير المرتبطين بالمجمع. يمكنك الآن استيراد كشف شاغلي الوظائف التعليمية والإدارية الفعلي لمجمع الشريعة التعليمي للبنين مباشرة عبر ملف Excel (.xlsx أو .xls) المصدّر من نظام نور.
+          </p>
 
-                      {/* Name */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                            isTeacher 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {isTeacher ? <GraduationCap className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 block">{staff.name}</span>
-                            {staff.notes && (
-                              <span className="text-[11px] text-slate-400 line-clamp-1">{staff.notes}</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => setIsNoorModalOpen(true)}
+              className="flex items-center gap-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold px-6 py-3.5 rounded-2xl shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+            >
+              <FileSpreadsheet className="w-5 h-5 text-emerald-200" />
+              <span>استيراد كشف نور من ملف Excel (.xlsx / .xls)</span>
+            </button>
 
-                      {/* National ID */}
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/60">
-                          {staff.nationalId}
-                        </span>
-                      </td>
+            <button
+              onClick={downloadNoorExcelTemplate}
+              className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs sm:text-sm font-bold px-5 py-3.5 rounded-2xl transition-all cursor-pointer shadow-xs"
+            >
+              <Download className="w-4 h-4 text-emerald-700" />
+              <span>تحميل نموذج إكسل نور فارغ</span>
+            </button>
 
-                      {/* Mobile */}
-                      <td className="py-3.5 px-4">
-                        <a 
-                          href={`tel:${staff.phone}`}
-                          className="font-mono text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
-                          dir="ltr"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-emerald-600 inline" />
-                          {formatDisplayPhone(staff.phone)}
-                        </a>
-                      </td>
-
-                      {/* Role & Subject */}
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          isTeacher 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                            : 'bg-blue-50 text-blue-700 border border-blue-200'
-                        }`}>
-                          {staff.roleTitle}
-                        </span>
-                        {staff.subject && (
-                          <span className="block text-[11px] text-slate-500 mt-0.5 font-medium">
-                            {staff.subject}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Stage */}
-                      <td className="py-3.5 px-4">
-                        <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-medium">
-                          {staff.stage === 'elementary' ? 'الابتدائية' :
-                           staff.stage === 'intermediate' ? 'المتوسطة' :
-                           staff.stage === 'secondary' ? 'الثانوية' : 'عام / المجمع'}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Direct WhatsApp Message */}
-                          <button
-                            onClick={() => openDirectWhatsApp(staff.phone, staff.name)}
-                            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors cursor-pointer"
-                            title={`محادثة واتساب مباشرة مع ${staff.name}`}
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                          </button>
-
-                          {/* Edit */}
-                          <button
-                            onClick={() => openEditModal(staff)}
-                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-                            title="تعديل البيانات"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => {
-                              if (confirm(`هل أنت متأكد من حذف الموظف (${staff.name}) من سجل المجمع؟`)) {
-                                onDeleteStaff(staff.id);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors cursor-pointer"
-                            title="حذف من السجل"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold px-5 py-3.5 rounded-2xl transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إضافة موظف فردي يدوياً</span>
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200/80 border-r-4 border-r-emerald-600 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
+                  <th className="py-3.5 px-4">#</th>
+                  <th className="py-3.5 px-4">اسم الموظف الرباعي</th>
+                  <th className="py-3.5 px-4">السجل المدني (الوطني)</th>
+                  <th className="py-3.5 px-4">رقم الجوال</th>
+                  <th className="py-3.5 px-4">المسمى الوظيفي / التخصص</th>
+                  <th className="py-3.5 px-4">المرحلة</th>
+                  <th className="py-3.5 px-4 text-center">التواصل والعمليات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      <UserCheck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <p className="font-semibold text-slate-600">لم يتم العثور على موظفين يطابقون البحث</p>
+                      <p className="text-xs text-slate-400 mt-1">تأكد من كتابة الاسم أو رقم السجل المدني بشكل صحيح</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((staff, idx) => {
+                    const isTeacher = staff.role === 'teacher';
+                    return (
+                      <tr key={staff.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-mono text-slate-400 text-xs">
+                          {idx + 1}
+                        </td>
+
+                        {/* Name */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                              isTeacher 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {isTeacher ? <GraduationCap className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block">{staff.name}</span>
+                              {staff.notes && (
+                                <span className="text-[11px] text-slate-400 line-clamp-1">{staff.notes}</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* National ID */}
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/60">
+                            {staff.nationalId}
+                          </span>
+                        </td>
+
+                        {/* Mobile */}
+                        <td className="py-3.5 px-4">
+                          <a 
+                            href={`tel:${staff.phone}`}
+                            className="font-mono text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
+                            dir="ltr"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 inline" />
+                            {formatDisplayPhone(staff.phone)}
+                          </a>
+                        </td>
+
+                        {/* Role & Subject */}
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            isTeacher 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {staff.roleTitle}
+                          </span>
+                          {staff.subject && (
+                            <span className="block text-[11px] text-slate-500 mt-0.5 font-medium">
+                              {staff.subject}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Stage */}
+                        <td className="py-3.5 px-4">
+                          <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                            {staff.stage === 'elementary' ? 'الابتدائية' :
+                             staff.stage === 'intermediate' ? 'المتوسطة' :
+                             staff.stage === 'secondary' ? 'الثانوية' : 'عام / المجمع'}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Direct WhatsApp Message */}
+                            <button
+                              onClick={() => openDirectWhatsApp(staff.phone, staff.name)}
+                              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors cursor-pointer"
+                              title={`محادثة واتساب مباشرة مع ${staff.name}`}
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </button>
+
+                            {/* Edit */}
+                            <button
+                              onClick={() => openEditModal(staff)}
+                              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                              title="تعديل البيانات"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              id={`delete-staff-${staff.id}`}
+                              onClick={() => setStaffToDelete(staff)}
+                              className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors cursor-pointer"
+                              title={`حذف الموظف (${staff.name})`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Staff Modal */}
       {(isAddModalOpen || editingStaff) && (
@@ -701,24 +823,42 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
               </div>
 
               {/* Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddModalOpen(false);
-                    setEditingStaff(null);
-                  }}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold shadow-xs transition-colors flex items-center gap-1.5"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>{editingStaff ? 'حفظ التعديلات' : 'إضافة الموظف'}</span>
-                </button>
+              <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100">
+                {editingStaff ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const staff = editingStaff;
+                      setIsAddModalOpen(false);
+                      setEditingStaff(null);
+                      setStaffToDelete(staff);
+                    }}
+                    className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-rose-200"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>حذف الموظف</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddModalOpen(false);
+                      setEditingStaff(null);
+                    }}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold shadow-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{editingStaff ? 'حفظ التعديلات' : 'إضافة الموظف'}</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -784,6 +924,154 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                   <span>معالجة وإضافة الموظفين</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Noor System Advanced Import Modal */}
+      <NoorImportModal
+        isOpen={isNoorModalOpen}
+        onClose={() => setIsNoorModalOpen(false)}
+        existingStaffList={staffList}
+        onImportComplete={(imported, updateExisting) => {
+          onBulkImport(imported, updateExisting);
+        }}
+      />
+
+      {/* Delete Staff Confirmation Modal */}
+      {staffToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 border-r-6 border-r-rose-600 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  تأكيد حذف الموظف من السجل
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  أنت على وشك حذف سجل هذا الموظف من قاعدة بيانات المجمع
+                </p>
+              </div>
+            </div>
+
+            {/* Staff Details Card */}
+            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">الاسم الرباعي:</span>
+                <span className="font-bold text-slate-900">{staffToDelete.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">السجل المدني:</span>
+                <span className="font-mono font-bold text-slate-800">{staffToDelete.nationalId}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">المسمى الوظيفي:</span>
+                <span className="font-semibold text-emerald-800">{staffToDelete.roleTitle}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">المرحلة التعليمية:</span>
+                <span className="font-semibold text-slate-700">
+                  {staffToDelete.stage === 'elementary' ? 'المرحلة الابتدائية' :
+                   staffToDelete.stage === 'intermediate' ? 'المرحلة المتوسطة' :
+                   staffToDelete.stage === 'secondary' ? 'المرحلة الثانوية' : 'عام / كامل المجمع'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">رقم الجوال:</span>
+                <span className="font-mono text-slate-700 dir-ltr">{formatDisplayPhone(staffToDelete.phone)}</span>
+              </div>
+            </div>
+
+            {/* Warning Note */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-[11px] text-amber-900 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                <strong>تنبيه إداري:</strong> سيتم استبعاد الموظف من قائمة الكشوف وتوزيع التعاميم الجديدة. التوقيعات السابقة المحفوظة بأرشيف المجمع ستبقى موثقة قانونياً باسمه.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setStaffToDelete(null)}
+                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-xs sm:text-sm cursor-pointer"
+              >
+                إلغاء وتراجع
+              </button>
+              <button
+                type="button"
+                id="confirm-delete-staff-btn"
+                onClick={() => {
+                  const deletedName = staffToDelete.name;
+                  onDeleteStaff(staffToDelete.id);
+                  setStaffToDelete(null);
+                  setFeedbackNotice(`تم حذف الموظف (${deletedName}) من سجلات مجمع الشريعة بنجاح.`);
+                  setTimeout(() => setFeedbackNotice(null), 5000);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>تأكيد الحذف نهائياً</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Staff Confirmation Modal */}
+      {showClearConfirmModal && onClearAllStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-rose-200 border-r-6 border-r-rose-600 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-inner">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                  تفريغ وحذف جميع سجلات الموظفين
+                </h3>
+                <p className="text-xs text-rose-700 font-semibold mt-0.5">
+                  إجراء إداري لتصفير القائمة تمهيداً لاستيراد الكشف الجديد
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              هل أنت متأكد من رغبتك في حذف كافة الموظفين ({staffList.length} موظفاً) من السجل بالكامل؟
+            </p>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-[11px] text-amber-900 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                سيتم مسح الأسماء الحالية بالكامل ليتسنى لك استيراد كشف منسوبي مجمع الشريعة التعليمي للبنين عبر ملف إكسل نظام نور.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirmModal(false)}
+                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-xs sm:text-sm cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                id="confirm-clear-all-staff-btn"
+                onClick={() => {
+                  onClearAllStaff();
+                  setShowClearConfirmModal(false);
+                  setFeedbackNotice('تم تفريغ وحذف جميع سجلات الموظفين بنجاح. السجل الآن جاهز لاستيراد ملف نور.');
+                  setTimeout(() => setFeedbackNotice(null), 5000);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>تأكيد تفريغ السجل بالكامل</span>
+              </button>
             </div>
           </div>
         </div>

@@ -101,7 +101,7 @@ export interface DispatchedDocument {
 export interface SchoolSettings {
   schoolName: string;
   schoolCode: string;
-  adminPhone: string; // WhatsApp number that receives the signed papers back (e.g. 0501234567)
+  adminPhone: string; // WhatsApp number that receives the signed papers back (0509205097)
   principalName: string;
   vicePrincipalName: string;
   educationDepartment: string;

@@ -123,18 +123,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-100/90 text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white">
-      {/* Top Full-Width Ministry Banner */}
-      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 text-slate-100 px-4 sm:px-8 py-2.5 border-b border-emerald-800/40 text-xs">
+      {/* Top Green & Yellow Medium Gradient Accent Ribbon */}
+      <div className="h-2 w-full bg-gradient-to-r from-emerald-600 via-emerald-500 via-amber-400 via-yellow-400 to-emerald-600 shadow-2xs" />
+
+      {/* Top Full-Width Ministry Banner with Green & Yellow Blend */}
+      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 via-amber-600 to-emerald-800 text-white px-4 sm:px-8 py-2.5 border-b border-amber-400/30 text-xs">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 flex-wrap">
             <MoeLogo variant="white" size="sm" className="h-6 w-auto opacity-95" />
             <span className="font-bold tracking-wide text-white">المملكة العربية السعودية</span>
-            <span className="text-emerald-500/80">•</span>
-            <span className="text-slate-300 font-medium">وزارة التعليم</span>
-            <span className="text-emerald-500/80">•</span>
-            <span className="text-emerald-200 font-semibold">{schoolSettings.educationDepartment}</span>
+            <span className="text-amber-300">•</span>
+            <span className="text-emerald-100 font-medium">وزارة التعليم</span>
+            <span className="text-amber-300">•</span>
+            <span className="text-amber-200 font-semibold">{schoolSettings.educationDepartment}</span>
           </div>
-          <div className="flex items-center gap-2 text-emerald-300/90 font-mono text-[11px]">
+          <div className="flex items-center gap-2 text-amber-200 font-mono text-[11px] bg-emerald-950/60 px-2.5 py-1 rounded-md border border-amber-400/30">
             <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
             <span>بوابة موحدة مشفرة ومحمية بالرمز السري</span>
           </div>

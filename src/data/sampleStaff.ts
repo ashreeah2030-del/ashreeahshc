@@ -3,7 +3,7 @@ import { StaffMember, DispatchedDocument, SchoolSettings } from '../types';
 export const DEFAULT_SCHOOL_SETTINGS: SchoolSettings = {
   schoolName: "مجمع الشريعة التعليمي للبنين",
   schoolCode: "432109",
-  adminPhone: "0501234567", // جوال إدارة مجمع الشريعة المستلم للردود
+  adminPhone: "0509205097", // جوال إدارة مجمع الشريعة المستلم للردود (الواتس أب)
   principalName: "الأستاذ حمود بن علي محمد نهاري",
   vicePrincipalName: "أ. صالح بن فهد الحربي",
   educationDepartment: "الإدارة العامة للتعليم بجازان",
@@ -13,33 +13,7 @@ export const DEFAULT_SCHOOL_SETTINGS: SchoolSettings = {
   adminUsername: "admin",
 };
 
-export const INITIAL_STAFF_MEMBERS: StaffMember[] = [
-  // الإدارة المدرسية
-  {
-    id: "staff-1",
-    nationalId: "1028471923",
-    name: "حمود بن علي محمد نهاري",
-    phone: "0501234567",
-    role: "principal",
-    roleTitle: "مدير المجمع التعليمي",
-    stage: "all",
-    subject: "إدارة مدرسية",
-    notes: "مدير مجمع الشريعة - إشراف إدارة المجمع",
-    active: true,
-  },
-  {
-    id: "staff-2",
-    nationalId: "1039485721",
-    name: "صالح بن فهد الحربي",
-    phone: "0559876543",
-    role: "vice_principal",
-    roleTitle: "وكيل شؤون المعلمين والموظفين",
-    stage: "all",
-    subject: "إدارة تربوية",
-    notes: "مسؤول الحضور والانصراف والمساءلات",
-    active: true,
-  },
-];
+export const INITIAL_STAFF_MEMBERS: StaffMember[] = [];
 
 export const INITIAL_DISPATCHED_DOCUMENTS: DispatchedDocument[] = [
   {

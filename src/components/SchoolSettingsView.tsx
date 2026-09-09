@@ -116,7 +116,7 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
               type="text"
               value={formData.adminPhone}
               onChange={(e) => setFormData({ ...formData, adminPhone: e.target.value })}
-              placeholder="مثال: 0501234567"
+              placeholder="مثال: 0509205097"
               className="px-4 py-2.5 bg-white border-2 border-emerald-400 rounded-xl font-mono text-base font-black text-emerald-950 focus:ring-2 focus:ring-emerald-500/30 outline-none dir-ltr text-center sm:text-right shadow-2xs"
             />
             <button

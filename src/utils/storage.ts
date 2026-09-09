@@ -3,7 +3,7 @@ import { INITIAL_STAFF_MEMBERS, INITIAL_DISPATCHED_DOCUMENTS, DEFAULT_SCHOOL_SET
 import { INITIAL_CIRCULAR_TEMPLATES } from '../data/sampleTemplates';
 
 const STORAGE_KEYS = {
-  STAFF: 'shariah_platform_staff_v1',
+  STAFF: 'shariah_platform_staff_v5',
   DOCUMENTS: 'shariah_platform_documents_v1',
   SETTINGS: 'shariah_platform_settings_v1',
   AUTH: 'shariah_platform_auth_session_v1',
@@ -12,52 +12,26 @@ const STORAGE_KEYS = {
 
 export function loadStaffMembers(): StaffMember[] {
   try {
+    // Purge any old mock/dummy staff storage keys so unrelated staff are completely deleted
+    ['shariah_platform_staff_v1', 'shariah_platform_staff_v2', 'shariah_platform_staff_v3', 'shariah_platform_staff_v4'].forEach(key => {
+      try { localStorage.removeItem(key); } catch {}
+    });
+
     const raw = localStorage.getItem(STORAGE_KEYS.STAFF);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        let changed = false;
-        
-        // Retain only staff-1 and staff-2 (or new user-added staff that wasn't in the old dummy list)
-        let filtered = parsed.filter((m: StaffMember) => {
-          const num = parseInt(m.id.replace('staff-', ''), 10);
-          if (!isNaN(num) && num >= 3 && num <= 20) {
-            changed = true;
-            return false;
-          }
-          return true;
-        });
-
-        if (filtered.length === 0) {
-          filtered = INITIAL_STAFF_MEMBERS;
-          changed = true;
-        }
-
-        const mapped = filtered.map((m: StaffMember) => {
-          let updatedName = m.name;
-          if (m.id === 'staff-1' || m.role === 'principal' || m.name.includes('الشريفي')) {
-            updatedName = 'حمود بن علي محمد نهاري';
-            changed = true;
-          }
-          return {
-            ...m,
-            name: updatedName,
-            pin: m.pin || m.nationalId.slice(-4)
-          };
-        });
-        if (changed) {
-          saveStaffMembers(mapped);
-        }
-        return mapped;
+      if (Array.isArray(parsed)) {
+        return parsed.map((m: StaffMember) => ({
+          ...m,
+          pin: m.pin || m.nationalId?.slice(-4) || '1234'
+        }));
       }
     }
   } catch (e) {
     console.error('Error loading staff from localStorage:', e);
   }
-  return INITIAL_STAFF_MEMBERS.map(m => ({
-    ...m,
-    pin: m.pin || m.nationalId.slice(-4)
-  }));
+  // If no staff has been imported yet by the user, return an empty list as requested
+  return [];
 }
 
 export function saveStaffMembers(staff: StaffMember[]): void {
@@ -65,6 +39,14 @@ export function saveStaffMembers(staff: StaffMember[]): void {
     localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff));
   } catch (e) {
     console.error('Error saving staff to localStorage:', e);
+  }
+}
+
+export function clearAllStaffMembers(): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify([]));
+  } catch (e) {
+    console.error('Error clearing staff in localStorage:', e);
   }
 }
 
@@ -276,6 +258,11 @@ export function loadSchoolSettings(): SchoolSettings {
         parsed.academicYear.includes('1444')
       ) {
         parsed.academicYear = DEFAULT_SCHOOL_SETTINGS.academicYear; // "1448هـ"
+        changed = true;
+      }
+      // Auto-migrate admin WhatsApp phone to official school mobile 0509205097
+      if (!parsed.adminPhone || parsed.adminPhone === '0501234567') {
+        parsed.adminPhone = '0509205097';
         changed = true;
       }
       if (changed) {

@@ -20,10 +20,12 @@ import {
   Eye, 
   Printer, 
   FileCheck,
-  Check
+  Check,
+  Calendar
 } from 'lucide-react';
 import { formatDisplayPhone } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
+import { AcademicCalendarView } from './AcademicCalendarView';
 
 interface StaffPortalViewProps {
   currentStaff: StaffMember;
@@ -42,7 +44,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   onUpdatePin,
   onLogout,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'inquiries' | 'circulars' | 'history'>('inquiries');
+  const [activeSubTab, setActiveSubTab] = useState<'inquiries' | 'circulars' | 'history' | 'calendar'>('inquiries');
   
   // PIN change state
   const [isChangingPin, setIsChangingPin] = useState(false);
@@ -296,6 +298,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           <span className="bg-slate-200 text-slate-700 text-[10px] font-mono px-2 py-0.5 rounded-full">
             {mySignedHistory.length}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('calendar')}
+          className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-colors cursor-pointer ${
+            activeSubTab === 'calendar'
+              ? 'bg-emerald-800 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>التقويم الدراسي (1448هـ)</span>
         </button>
       </div>
 
@@ -617,6 +632,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Tab Content: CALENDAR */}
+      {activeSubTab === 'calendar' && (
+        <AcademicCalendarView
+          schoolSettings={schoolSettings}
+          isStaffPortal={true}
+        />
       )}
     </div>
   );

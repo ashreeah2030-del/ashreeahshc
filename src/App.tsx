@@ -9,6 +9,7 @@ import {
 import { 
   loadStaffMembers, 
   saveStaffMembers, 
+  clearAllStaffMembers,
   loadDocuments, 
   saveDocuments, 
   loadSchoolSettings, 
@@ -32,6 +33,7 @@ import { TeacherSimulatorModal } from './components/TeacherSimulatorModal';
 import { LoginView } from './components/LoginView';
 import { StaffPortalView } from './components/StaffPortalView';
 import { ChangePasscodeModal } from './components/ChangePasscodeModal';
+import { AcademicCalendarView } from './components/AcademicCalendarView';
 
 export default function App() {
   // Authentication State
@@ -41,7 +43,7 @@ export default function App() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [documents, setDocuments] = useState<DispatchedDocument[]>([]);
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(loadSchoolSettings());
-  const [activeTab, setActiveTab] = useState<'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'settings' | 'portal'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal'>('staff');
 
   // Interactive Modals
   const [auditDoc, setAuditDoc] = useState<DispatchedDocument | null>(null);
@@ -132,15 +134,39 @@ export default function App() {
     saveStaffMembers(updated);
   };
 
-  const handleBulkImportStaff = (importedList: Omit<StaffMember, 'id'>[]) => {
-    const newStaffList: StaffMember[] = importedList.map((item, idx) => ({
-      ...item,
-      id: `staff-${Date.now()}-${idx}`,
-      pin: item.pin || item.nationalId.slice(-4),
-    }));
-    const updated = [...newStaffList, ...staffList];
-    setStaffList(updated);
-    saveStaffMembers(updated);
+  const handleClearAllStaff = () => {
+    setStaffList([]);
+    clearAllStaffMembers();
+  };
+
+  const handleBulkImportStaff = (importedList: Omit<StaffMember, 'id'>[], updateExisting: boolean = true) => {
+    let currentList = [...staffList];
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    for (const item of importedList) {
+      const existingIdx = currentList.findIndex(s => s.nationalId === item.nationalId);
+      if (existingIdx !== -1 && updateExisting) {
+        currentList[existingIdx] = {
+          ...currentList[existingIdx],
+          ...item,
+          id: currentList[existingIdx].id,
+          pin: item.pin || currentList[existingIdx].pin || item.nationalId.slice(-4),
+        };
+        updatedCount++;
+      } else if (existingIdx === -1) {
+        const newStaff: StaffMember = {
+          ...item,
+          id: `staff-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+          pin: item.pin || item.nationalId.slice(-4),
+        };
+        currentList.unshift(newStaff);
+        addedCount++;
+      }
+    }
+
+    setStaffList(currentList);
+    saveStaffMembers(currentList);
   };
 
   // Handlers for Documents
@@ -294,6 +320,7 @@ export default function App() {
                 onUpdateStaff={handleUpdateStaff}
                 onDeleteStaff={handleDeleteStaff}
                 onBulkImport={handleBulkImportStaff}
+                onClearAllStaff={handleClearAllStaff}
               />
             )}
 
@@ -337,6 +364,12 @@ export default function App() {
                 schoolSettings={schoolSettings}
                 onOpenAuditModal={(doc) => setAuditDoc(doc)}
                 onOpenSignPortal={handleOpenSignPortal}
+              />
+            )}
+
+            {activeTab === 'calendar' && (
+              <AcademicCalendarView
+                schoolSettings={schoolSettings}
               />
             )}
 

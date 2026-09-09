@@ -14,15 +14,16 @@ import {
   Lock,
   User,
   BarChart3,
-  KeyRound
+  KeyRound,
+  Calendar
 } from 'lucide-react';
 import { SchoolSettings, StaffMember, DispatchedDocument, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
 import { CircularProgress } from './CircularProgress';
 
 interface HeaderProps {
-  activeTab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'settings' | 'portal';
-  setActiveTab: (tab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'settings' | 'portal') => void;
+  activeTab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal';
+  setActiveTab: (tab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal') => void;
   schoolSettings: SchoolSettings;
   staffList: StaffMember[];
   documents: DispatchedDocument[];
@@ -67,30 +68,33 @@ export const Header: React.FC<HeaderProps> = ({
   const isStaff = authSession?.role === 'staff';
 
   return (
-    <header className="bg-white border-b border-slate-200 shadow-xs sticky top-0 z-30">
-      {/* Top Ministry Banner */}
-      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 text-slate-100 px-4 py-2 border-b border-emerald-800/40">
+    <header className="bg-gradient-to-r from-emerald-50/90 via-amber-50/50 to-emerald-50/80 border-b border-amber-200/80 shadow-xs sticky top-0 z-30 backdrop-blur-xs">
+      {/* Top Green & Yellow Medium Gradient Accent Ribbon */}
+      <div className="h-2 w-full bg-gradient-to-r from-emerald-600 via-emerald-500 via-amber-400 via-yellow-400 to-emerald-600 shadow-2xs" />
+
+      {/* Top Ministry Banner with Balanced Green & Golden Yellow Blend */}
+      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 via-amber-600 to-emerald-800 text-white px-4 py-2 border-b border-amber-400/30">
         <div className="w-full px-2 sm:px-4 lg:px-8 xl:px-10 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
           <div className="flex items-center gap-2.5 flex-wrap">
             <MoeLogo variant="white" size="sm" className="h-6 w-auto opacity-95 hover:opacity-100 transition-opacity" />
             <span className="font-bold tracking-wide text-white">المملكة العربية السعودية</span>
-            <span className="text-emerald-500/80">•</span>
-            <span className="text-slate-300 font-medium">وزارة التعليم</span>
-            <span className="text-emerald-500/80">•</span>
-            <span className="text-emerald-200 font-semibold">{schoolSettings.educationDepartment}</span>
+            <span className="text-amber-300">•</span>
+            <span className="text-emerald-100 font-medium">وزارة التعليم</span>
+            <span className="text-amber-300">•</span>
+            <span className="text-amber-200 font-semibold">{schoolSettings.educationDepartment}</span>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* User Session Info */}
             {authSession && (
-              <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1 rounded-lg border border-slate-700 text-xs">
+              <div className="flex items-center gap-2 bg-emerald-950/70 px-3 py-1 rounded-lg border border-amber-400/30 text-xs">
                 {isAdmin ? (
                   <div className="flex items-center gap-1.5 text-amber-300 font-bold">
                     <Lock className="w-3.5 h-3.5" />
                     <span>إدارة المجمع</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                  <div className="flex items-center gap-1.5 text-emerald-200 font-bold">
                     <User className="w-3.5 h-3.5" />
                     <span>{authSession.staffMember?.name}</span>
                   </div>
@@ -98,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
                 
                 <button
                   onClick={onLogout}
-                  className="mr-2 text-rose-400 hover:text-rose-300 flex items-center gap-1 font-bold text-[11px] transition-colors cursor-pointer border-r border-slate-700 pr-2"
+                  className="mr-2 text-rose-300 hover:text-rose-200 flex items-center gap-1 font-bold text-[11px] transition-colors cursor-pointer border-r border-emerald-700 pr-2"
                   title="تسجيل الخروج للعودة إلى شاشة تسجيل الدخول الموحد"
                 >
                   <LogOut className="w-3 h-3" />
@@ -107,9 +111,9 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            <div className="flex items-center gap-1.5 bg-emerald-900/60 px-3 py-1 rounded-lg border border-emerald-700/50 text-emerald-200">
-              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px] text-emerald-300/90 font-medium">جوال الواتساب:</span>
+            <div className="flex items-center gap-1.5 bg-emerald-950/60 px-3 py-1 rounded-lg border border-amber-400/30 text-amber-200">
+              <Smartphone className="w-3.5 h-3.5 text-amber-300" />
+              <span className="text-[11px] text-emerald-200 font-medium">جوال الواتساب:</span>
               <span className="font-mono font-bold text-white text-xs dir-ltr">{schoolSettings.adminPhone}</span>
             </div>
 
@@ -118,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 id="header-change-passcode-btn"
                 onClick={onOpenChangePasswordModal}
-                className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-400/40 text-xs font-bold transition-all shadow-2xs cursor-pointer hover:border-amber-400"
+                className="flex items-center gap-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-400/50 text-xs font-bold transition-all shadow-2xs cursor-pointer hover:border-amber-300"
                 title="تغيير رمز الدخول السري لإدارة المنظومة"
               >
                 <KeyRound className="w-3.5 h-3.5 text-amber-400" />
@@ -130,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="simulate-teacher-view-btn"
                 onClick={onOpenTeacherSimulator}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer text-xs"
+                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer text-xs"
                 title="معاينة شاشة المعلم وتجربة التوقيع بيدك"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -307,6 +311,24 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
+              id="tab-calendar"
+              onClick={() => setActiveTab('calendar')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'calendar'
+                  ? 'bg-emerald-800 text-white shadow-xs ring-1 ring-emerald-700/50'
+                  : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-900'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              <span>التقويم الدراسي</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === 'calendar' ? 'bg-emerald-950 text-white' : 'bg-amber-100 text-amber-900 border border-amber-200'
+              }`}>
+                1448هـ
+              </span>
+            </button>
+
+            <button
               id="tab-settings"
               onClick={() => setActiveTab('settings')}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
@@ -321,6 +343,9 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
       </div>
+
+      {/* Bottom Subtle Green-to-Yellow Accent Border */}
+      <div className="h-1 w-full bg-gradient-to-r from-emerald-600 via-amber-400 via-yellow-400 to-emerald-600 opacity-90 shadow-2xs" />
     </header>
   );
 };
