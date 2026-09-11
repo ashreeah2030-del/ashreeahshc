@@ -18,6 +18,7 @@ import {
   ShieldCheck, 
   Lock, 
   Eye, 
+  EyeOff,
   Printer, 
   FileCheck,
   Check,
@@ -26,6 +27,7 @@ import {
 import { formatDisplayPhone } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
 import { AcademicCalendarView } from './AcademicCalendarView';
+import { maskNationalId } from '../utils/formatters';
 
 interface StaffPortalViewProps {
   currentStaff: StaffMember;
@@ -50,6 +52,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   const [isChangingPin, setIsChangingPin] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState(false);
+  const [showMyNationalId, setShowMyNationalId] = useState(false);
 
   // Filter documents belonging to THIS staff member only!
   // Inquiries strictly issued to this staff member
@@ -160,8 +163,21 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           {/* Quick Staff Details Bar */}
           <div className="mt-5 pt-4 border-t border-emerald-800/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="bg-slate-900/60 p-2 rounded-xl border border-emerald-800/40 border-r-3 border-r-amber-400">
-              <span className="text-slate-400 block text-[10px]">السجل المدني (الوطني):</span>
-              <span className="font-mono font-bold text-amber-300 tracking-wider text-sm">{currentStaff.nationalId}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 block text-[10px]">الهوية الوطنية (محمية):</span>
+                <button
+                  type="button"
+                  onClick={() => setShowMyNationalId(!showMyNationalId)}
+                  className="text-slate-400 hover:text-amber-300 transition-colors p-0.5"
+                  title={showMyNationalId ? "إخفاء رقم الهوية (حماية الخصوصية)" : "إظهار رقم الهوية"}
+                  aria-label="تبديل إظهار الهوية"
+                >
+                  {showMyNationalId ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <span className="font-mono font-bold text-amber-300 tracking-wider text-sm block mt-0.5" dir="ltr">
+                {showMyNationalId ? currentStaff.nationalId : maskNationalId(currentStaff.nationalId)}
+              </span>
             </div>
             <div className="bg-slate-900/60 p-2 rounded-xl border border-emerald-800/40 border-r-3 border-r-emerald-400">
               <span className="text-slate-400 block text-[10px]">رقم الجوال:</span>

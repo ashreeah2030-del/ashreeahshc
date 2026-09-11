@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DispatchedDocument, StaffMember, SchoolSettings, InquiryDetails, InquiryReason } from '../types';
 import { generateStaffDispatchWhatsApp, getDocumentSigningUrl } from '../utils/whatsapp';
+import { maskNationalId } from '../utils/formatters';
 
 interface InquiriesManagerProps {
   documents: DispatchedDocument[];
@@ -228,7 +229,7 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
                         الموظف: <span className="text-emerald-800 font-extrabold">{inq?.staffName}</span>
                       </span>
                       <span className="text-slate-500">
-                        السجل المدني: <span className="font-mono text-slate-700 font-bold">{inq?.staffNationalId}</span>
+                        السجل المدني: <span className="font-mono text-slate-700 font-bold" dir="ltr">{maskNationalId(inq?.staffNationalId)}</span>
                       </span>
                       <span className="text-slate-500">
                         الجوال: <span className="font-mono text-slate-700 font-bold" dir="ltr">{inq?.staffPhone}</span>
@@ -362,7 +363,7 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
                   <option value="">-- اختر المعلم أو الإداري من القائمة --</option>
                   {staffList.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.name} - {s.roleTitle} (السجل: {s.nationalId} | الجوال: {s.phone})
+                      {s.name} - {s.roleTitle} (السجل: {maskNationalId(s.nationalId)} | الجوال: {s.phone})
                     </option>
                   ))}
                 </select>

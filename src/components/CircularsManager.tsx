@@ -25,6 +25,7 @@ import { DispatchedDocument, StaffMember, SchoolSettings, CircularDetails, Circu
 import { generateStaffDispatchWhatsApp, getDocumentSigningUrl } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
 import { CircularTemplatesModal } from './CircularTemplatesModal';
+import { maskNationalId } from '../utils/formatters';
 import { 
   loadCircularTemplates, 
   addCircularTemplate, 
@@ -435,7 +436,7 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                          <span>السجل: <span className="font-mono font-medium text-slate-700">{staff.nationalId}</span></span>
+                          <span>السجل: <span className="font-mono font-medium text-slate-700" dir="ltr">{maskNationalId(staff.nationalId)}</span></span>
                           <span>الجوال: <span className="font-mono font-medium text-slate-700" dir="ltr">{staff.phone}</span></span>
                         </div>
                       </div>

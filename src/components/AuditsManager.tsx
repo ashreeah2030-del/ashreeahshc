@@ -17,6 +17,7 @@ import {
 import { DispatchedDocument, StaffMember, SchoolSettings } from '../types';
 import { generateStaffDispatchWhatsApp } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
+import { maskNationalId } from '../utils/formatters';
 
 interface AuditsManagerProps {
   documents: DispatchedDocument[];
@@ -245,7 +246,7 @@ export const AuditsManager: React.FC<AuditsManagerProps> = ({
                   <div>
                     <span className="font-bold text-slate-900">{staff.name}</span>
                     <span className="text-slate-400 mr-2">({staff.roleTitle})</span>
-                    <span className="text-slate-500 mr-2 font-mono">سجل: {staff.nationalId}</span>
+                    <span className="text-slate-500 mr-2 font-mono" dir="ltr">سجل: {maskNationalId(staff.nationalId)}</span>
                     <span className="block text-[11px] text-emerald-800 mt-0.5">
                       مطلوب توقيعه على: <strong>{doc.title}</strong> (رقم: {doc.referenceNumber})
                     </span>

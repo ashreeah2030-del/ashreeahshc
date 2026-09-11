@@ -1,4 +1,5 @@
 import { StaffMember, DispatchedDocument, StaffSignature, SchoolSettings } from '../types';
+import { maskNationalId } from './formatters';
 
 /**
  * Clean and standardize Saudi mobile numbers to international format (966XXXXXXXXX)
@@ -55,7 +56,7 @@ export function generateStaffDispatchWhatsApp(
   if (isCircular) {
     text = `السلام عليكم ورحمة الله وبركاته
 المكرم الزميل/ ${staff.name} المحترم
-(السجل المدني: ${staff.nationalId})
+(الهوية الوطنية: ${maskNationalId(staff.nationalId)})
 ${staff.roleTitle} - ${schoolSettings.schoolName}
 
 نحيطكم علماً بصدور تعميم إداري رسمي:
@@ -75,7 +76,7 @@ ${docUrl}
     const inq = document.inquiryData;
     text = `السلام عليكم ورحمة الله وبركاته
 المكرم الزميل/ ${staff.name} المحترم
-(السجل المدني: ${staff.nationalId})
+(الهوية الوطنية: ${maskNationalId(staff.nationalId)})
 ${staff.roleTitle} - ${schoolSettings.schoolName}
 
 نفيدكم بصدور (ورقة مساءلة إدارية):
@@ -120,7 +121,7 @@ export function generateSchoolReturnWhatsApp(
 📌 عنوان التعميم: ${document.title}
 🔢 رقم التعميم: ${document.referenceNumber}
 👤 اسم الموظف الموقع: ${staff.name}
-🆔 السجل المدني: ${staff.nationalId}
+🆔 الهوية الوطنية: ${maskNationalId(staff.nationalId)}
 💼 الوظيفة: ${staff.roleTitle}
 ⏰ وقت وتاريخ التوقيع: ${signature.formattedDate}
 🔖 رمز توثيق التوقيع: ${signature.receiptCode}
@@ -137,7 +138,7 @@ ${docUrl}
 بخصوص ورقة المساءلة رقم (${document.referenceNumber}) بشأن (${document.inquiryData?.reasonTitle || document.title}):
 أفيدكم بأنه تم الاطلاع وتدوين الإفادة والتوقيع بالعلم إلكترونياً:
 👤 اسم الموظف: ${staff.name}
-🆔 السجل المدني: ${staff.nationalId}
+🆔 الهوية الوطنية: ${maskNationalId(staff.nationalId)}
 💼 الوظيفة: ${staff.roleTitle}
 ⏰ وقت التوقيع: ${signature.formattedDate}
 🔖 رمز الاعتماد: ${signature.receiptCode}

@@ -21,6 +21,7 @@ import { DispatchedDocument, StaffMember, SchoolSettings } from '../types';
 import { generateStaffDispatchWhatsApp } from '../utils/whatsapp';
 import { MoeLogo } from './MoeLogo';
 import { CircularProgress } from './CircularProgress';
+import { maskNationalId } from '../utils/formatters';
 
 interface SignatureAuditModalProps {
   document: DispatchedDocument;
@@ -347,7 +348,7 @@ export const SignatureAuditModal: React.FC<SignatureAuditModalProps> = ({
                   <tr className="bg-slate-100 border-b-2 border-slate-300 text-slate-800 font-black">
                     <th className="p-2.5 w-10 text-center">م</th>
                     <th className="p-2.5">اسم الموظف الرباعي</th>
-                    <th className="p-2.5">السجل المدني</th>
+                    <th className="p-2.5">الهوية الوطنية</th>
                     <th className="p-2.5">المسمى الوظيفي</th>
                     <th className="p-2.5 text-center">حالة التوقيع بالعلم</th>
                     <th className="p-2.5">تاريخ ووقت التوقيع</th>
@@ -367,7 +368,7 @@ export const SignatureAuditModal: React.FC<SignatureAuditModalProps> = ({
                       <tr key={staff.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="p-2.5 font-mono text-slate-500 text-center">{index + 1}</td>
                         <td className="p-2.5 font-bold text-slate-900 whitespace-nowrap">{staff.name}</td>
-                        <td className="p-2.5 font-mono text-slate-700">{staff.nationalId}</td>
+                        <td className="p-2.5 font-mono text-slate-700" dir="ltr">{maskNationalId(staff.nationalId)}</td>
                         <td className="p-2.5 text-slate-600">{staff.roleTitle}</td>
                         <td className="p-2.5 text-center">
                           {isSigned ? (

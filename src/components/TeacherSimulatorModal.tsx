@@ -9,6 +9,7 @@ import {
   Send
 } from 'lucide-react';
 import { DispatchedDocument, StaffMember } from '../types';
+import { maskNationalId } from '../utils/formatters';
 
 interface TeacherSimulatorModalProps {
   staffList: StaffMember[];
@@ -73,7 +74,7 @@ export const TeacherSimulatorModal: React.FC<TeacherSimulatorModalProps> = ({
             >
               {staffList.map(s => (
                 <option key={s.id} value={s.id}>
-                  {s.name} - {s.roleTitle} (سجل: {s.nationalId})
+                  {s.name} - {s.roleTitle} (الهوية: {maskNationalId(s.nationalId)})
                 </option>
               ))}
             </select>
@@ -101,7 +102,7 @@ export const TeacherSimulatorModal: React.FC<TeacherSimulatorModalProps> = ({
           {selectedStaff && selectedDoc && (
             <div className="p-3.5 bg-slate-50 border border-slate-200 border-r-4 border-r-amber-500 rounded-xl text-xs space-y-1.5 text-slate-700">
               <p>👤 <strong>الموظف:</strong> {selectedStaff.name} ({selectedStaff.roleTitle})</p>
-              <p>🆔 <strong>السجل المدني:</strong> {selectedStaff.nationalId}</p>
+              <p>🆔 <strong>الهوية الوطنية:</strong> <span className="font-mono font-bold" dir="ltr">{maskNationalId(selectedStaff.nationalId)}</span></p>
               <p>📱 <strong>رقم الجوال:</strong> <span dir="ltr">{selectedStaff.phone}</span></p>
               <p>📄 <strong>نوع المستند:</strong> {selectedDoc.type === 'circular' ? 'تعميم رسمي' : 'ورقة مساءلة'}</p>
               <p>

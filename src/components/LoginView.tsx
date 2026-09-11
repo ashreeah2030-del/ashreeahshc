@@ -16,6 +16,7 @@ import {
 import { StaffMember, SchoolSettings, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
 import { ChangePasscodeModal } from './ChangePasscodeModal';
+import { maskNationalId } from '../utils/formatters';
 
 interface LoginViewProps {
   schoolSettings: SchoolSettings;
@@ -341,7 +342,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                           className="text-right p-2 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 border-r-3 border-r-emerald-600 transition-colors text-[11px] cursor-pointer"
                         >
                           <span className="font-bold text-slate-900 block truncate">{staff.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono">سجل: {staff.nationalId}</span>
+                          <span className="text-[10px] text-slate-500 font-mono" dir="ltr">سجل: {maskNationalId(staff.nationalId)}</span>
                         </button>
                       ))}
                     </div>

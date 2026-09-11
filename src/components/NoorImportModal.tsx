@@ -26,6 +26,7 @@ import {
   ParsedNoorResult 
 } from '../utils/noorParser';
 import { formatDisplayPhone } from '../utils/whatsapp';
+import { maskNationalId } from '../utils/formatters';
 
 interface NoorImportModalProps {
   isOpen: boolean;
@@ -644,8 +645,8 @@ export const NoorImportModal: React.FC<NoorImportModalProps> = ({
                                   )}
                                 </div>
                               </td>
-                              <td className="p-3 font-mono font-semibold text-slate-800">
-                                {staff.nationalId}
+                              <td className="p-3 font-mono font-semibold text-slate-800" dir="ltr">
+                                {maskNationalId(staff.nationalId)}
                               </td>
                               <td className="p-3 font-mono text-slate-700" dir="ltr">
                                 {staff.phone ? formatDisplayPhone(staff.phone) : '—'}

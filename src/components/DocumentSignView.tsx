@@ -20,6 +20,7 @@ import confetti from 'canvas-confetti';
 import { DispatchedDocument, StaffMember, SchoolSettings, StaffSignature } from '../types';
 import { generateSchoolReturnWhatsApp } from '../utils/whatsapp';
 import { MoeLogo } from './MoeLogo';
+import { maskNationalId } from '../utils/formatters';
 
 interface DocumentSignViewProps {
   document: DispatchedDocument;
@@ -263,7 +264,7 @@ export const DocumentSignView: React.FC<DocumentSignViewProps> = ({
             </div>
 
             <div className="flex items-center gap-4 text-slate-700">
-              <span>السجل المدني: <strong className="font-mono text-slate-900">{staff.nationalId}</strong></span>
+              <span>السجل المدني: <strong className="font-mono text-slate-900" dir="ltr">{maskNationalId(staff.nationalId)}</strong></span>
               <span>الجوال: <strong className="font-mono text-slate-900" dir="ltr">{staff.phone}</strong></span>
             </div>
           </div>
@@ -414,7 +415,7 @@ export const DocumentSignView: React.FC<DocumentSignViewProps> = ({
                     className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
                   <span className="text-xs text-slate-700 leading-relaxed font-medium">
-                    أقر أنا الموظف <strong>({staff.name})</strong>، صاحب السجل المدني <strong>({staff.nationalId})</strong>، بأنني اطلعت على ما ورد بعاليه وأوقع بالعلم، وأتحمل كامل المسؤولية النظامية.
+                    أقر أنا الموظف <strong>({staff.name})</strong>، صاحب السجل المدني <strong className="font-mono" dir="ltr">({maskNationalId(staff.nationalId)})</strong>، بأنني اطلعت على ما ورد بعاليه وأوقع بالعلم، وأتحمل كامل المسؤولية النظامية.
                   </span>
                 </label>
 
@@ -470,7 +471,7 @@ export const DocumentSignView: React.FC<DocumentSignViewProps> = ({
                       <span className="text-xs text-slate-400">تم التوقيع بالعلم</span>
                     )}
                     <span className="text-[11px] text-slate-600 block mt-1 font-bold">
-                      {staff.name} - السجل: {staff.nationalId}
+                      {staff.name} - السجل: <span className="font-mono" dir="ltr">{maskNationalId(staff.nationalId)}</span>
                     </span>
                   </div>
 

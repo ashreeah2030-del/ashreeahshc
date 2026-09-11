@@ -33,6 +33,7 @@ import {
   HelpCircle,
   Filter
 } from 'lucide-react';
+import { maskNationalId } from '../utils/formatters';
 import { DispatchedDocument, StaffMember, SchoolSettings, StaffRole } from '../types';
 import { formatSaudiPhone } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
@@ -831,7 +832,7 @@ ${docsSummary}
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
                 <th className="py-3 px-3.5 w-10 text-center">م</th>
                 <th className="py-3 px-3.5">اسم الموظف</th>
-                <th className="py-3 px-3.5">السجل المدني</th>
+                <th className="py-3 px-3.5">الهوية الوطنية</th>
                 <th className="py-3 px-3.5">المسمى الوظيفي</th>
                 <th className="py-3 px-3.5 text-center">الوثائق المطلوبة</th>
                 <th className="py-3 px-3.5 text-center">تم التوقيع بالعلم</th>
@@ -852,7 +853,9 @@ ${docsSummary}
                     <td className="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">
                       {item.staff.name}
                     </td>
-                    <td className="py-3 px-3.5 font-mono text-slate-600">{item.staff.nationalId}</td>
+                    <td className="py-3 px-3.5 font-mono text-slate-600" dir="ltr">
+                      {maskNationalId(item.staff.nationalId)}
+                    </td>
                     <td className="py-3 px-3.5 text-slate-600">{item.staff.roleTitle}</td>
                     <td className="py-3 px-3.5 font-mono font-bold text-center text-slate-800">
                       {item.totalTargeted}

@@ -19,12 +19,16 @@ import {
   AlertTriangle,
   CheckCircle2,
   Building2,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff,
+  ShieldCheck
 } from 'lucide-react';
 import { StaffMember, SchoolStage, StaffRole } from '../types';
 import { formatSaudiPhone, formatDisplayPhone } from '../utils/whatsapp';
 import { NoorImportModal } from './NoorImportModal';
 import { downloadNoorExcelTemplate } from '../utils/noorParser';
+import { maskNationalId } from '../utils/formatters';
 
 interface StaffDirectoryProps {
   staffList: StaffMember[];
@@ -57,6 +61,19 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   const [isNoorModalOpen, setIsNoorModalOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+
+  const toggleRevealId = (staffId: string) => {
+    setRevealedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(staffId)) {
+        next.delete(staffId);
+      } else {
+        next.add(staffId);
+      }
+      return next;
+    });
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -510,7 +527,14 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
                   <th className="py-3.5 px-4">#</th>
                   <th className="py-3.5 px-4">اسم الموظف الرباعي</th>
-                  <th className="py-3.5 px-4">السجل المدني (الوطني)</th>
+                  <th className="py-3.5 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span>الهوية الوطنية</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium" title="رقم الهوية محمي ومخفي افتراضياً ما عدا آخر 4 أرقام">
+                        محمية
+                      </span>
+                    </div>
+                  </th>
                   <th className="py-3.5 px-4">رقم الجوال</th>
                   <th className="py-3.5 px-4">المسمى الوظيفي / التخصص</th>
                   <th className="py-3.5 px-4">المرحلة</th>
@@ -554,11 +578,29 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                           </div>
                         </td>
 
-                        {/* National ID */}
+                        {/* National ID (Masked except last 4 digits) */}
                         <td className="py-3.5 px-4">
-                          <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/60">
-                            {staff.nationalId}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span 
+                              className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/70 shadow-2xs" 
+                              dir="ltr"
+                            >
+                              {revealedIds.has(staff.id) ? staff.nationalId : maskNationalId(staff.nationalId)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleRevealId(staff.id)}
+                              className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                              title={revealedIds.has(staff.id) ? "إخفاء رقم الهوية (حماية الخصوصية)" : "إظهار كامل رقم الهوية"}
+                              aria-label="تبديل إظهار رقم الهوية"
+                            >
+                              {revealedIds.has(staff.id) ? (
+                                <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </td>
 
                         {/* Mobile */}
@@ -685,6 +727,15 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                     placeholder="10 أرقام (مثال: 1083921029)"
                     className="w-full px-3 py-2 font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none"
                   />
+                  {formData.nationalId && (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>العرض المحمي:</span>
+                      <strong className="font-mono font-bold text-emerald-800" dir="ltr">
+                        {maskNationalId(formData.nationalId)}
+                      </strong>
+                    </div>
+                  )}
                   {formErrors.nationalId && <p className="text-red-500 text-xs mt-1 font-medium">{formErrors.nationalId}</p>}
                 </div>
 
@@ -963,8 +1014,8 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                 <span className="font-bold text-slate-900">{staffToDelete.name}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-medium">السجل المدني:</span>
-                <span className="font-mono font-bold text-slate-800">{staffToDelete.nationalId}</span>
+                <span className="text-slate-500 font-medium">السجل المدني (الوطني):</span>
+                <span className="font-mono font-bold text-slate-800" dir="ltr">{maskNationalId(staffToDelete.nationalId)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 font-medium">المسمى الوظيفي:</span>
