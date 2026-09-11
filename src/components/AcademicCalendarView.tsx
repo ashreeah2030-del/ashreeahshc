@@ -25,7 +25,8 @@ import {
   AcademicSemesterInfo, 
   DEFAULT_ACADEMIC_SEMESTERS, 
   OFFICIAL_CALENDAR_EVENTS, 
-  ACADEMIC_YEAR_TITLE 
+  ACADEMIC_YEAR_TITLE,
+  ACADEMIC_SYSTEM_LABEL
 } from '../data/academicCalendarData';
 
 interface AcademicCalendarViewProps {
@@ -37,7 +38,7 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
   schoolSettings,
   isStaffPortal = false,
 }) => {
-  const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2' | '3'>('all');
+  const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -55,7 +56,7 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventHijri, setNewEventHijri] = useState('15 ربيع الأول 1448هـ');
   const [newEventGregorian, setNewEventGregorian] = useState(new Date().toISOString().slice(0, 10));
-  const [newEventSemester, setNewEventSemester] = useState<'1' | '2' | '3'>('1');
+  const [newEventSemester, setNewEventSemester] = useState<'1' | '2'>('1');
   const [newEventDescription, setNewEventDescription] = useState('');
 
   // Combine official and custom school events
@@ -120,21 +121,24 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
   // Share via WhatsApp
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `📅 التقويم الدراسي للعام ${schoolSettings.academicYear || ACADEMIC_YEAR_TITLE}\n` +
+      `📅 التقويم الدراسي للعام ${schoolSettings.academicYear || ACADEMIC_YEAR_TITLE} (${ACADEMIC_SYSTEM_LABEL})\n` +
       `المدرسة: ${schoolSettings.schoolName}\n` +
       `الإدارة: ${schoolSettings.educationDepartment}\n\n` +
-      `📌 أهم المواعيد:\n` +
+      `📌 محطات الفصل الدراسي الأول:\n` +
+      `• عودة الكوادر: 7 صفر 1448هـ\n` +
+      `• بداية الدراسة: 14 صفر 1448هـ\n` +
       `• اليوم الوطني: 11-12 ربيع الأول 1448هـ\n` +
-      `• إجازة الخريف: 25 جمادى الأولى 1448هـ\n` +
+      `• نهاية أسبوع مطولة: 2-3 جمادى الأولى 1448هـ\n` +
+      `• إجازة الخريف (منتصف الفصل): 25 جمادى الأولى 1448هـ\n` +
       `• اختبارات الفصل الأول: 17 جمادى الآخرة 1448هـ\n` +
-      `• إجازة نهاية الفصل الأول: 28 جمادى الآخرة 1448هـ\n` +
-      `• بداية الفصل الثاني: 9 رجب 1448هـ\n` +
+      `• إجازة منتصف العام (بين الفصلين): 28 جمادى الآخرة 1448هـ\n\n` +
+      `📌 محطات الفصل الدراسي الثاني:\n` +
+      `• بداية الدراسة للفصل الثاني: 16 رجب 1448هـ\n` +
       `• إجازة يوم التأسيس: 15 شعبان 1448هـ\n` +
       `• إجازة عيد الفطر: 18 رمضان 1448هـ\n` +
-      `• اختبارات الفصل الثاني: 4 ذو القعدة 1448هـ\n` +
-      `• بداية الفصل الثالث: 25 ذو القعدة 1448هـ\n` +
       `• إجازة عيد الأضحى: 4 ذو الحجة 1448هـ\n` +
-      `• نهاية العام الدراسي: 30 محرم 1449هـ\n\n` +
+      `• اختبارات نهاية العام: 21 ذو الحجة 1448هـ\n` +
+      `• بداية الإجازة الصيفية: 2 محرم 1449هـ\n\n` +
       `مع تحيات إدارة ${schoolSettings.schoolName}`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
@@ -202,6 +206,9 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
                 <h1 className="text-lg sm:text-xl font-black">
                   التقويم الدراسي للعام {schoolSettings.academicYear || ACADEMIC_YEAR_TITLE}
                 </h1>
+                <span className="bg-amber-400/20 text-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                  {ACADEMIC_SYSTEM_LABEL}
+                </span>
                 <span className="bg-emerald-400/20 text-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-300/30">
                   معتمد • وزارة التعليم
                 </span>
@@ -245,8 +252,8 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* 3 Semesters Highlight Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 2 Semesters Highlight Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {DEFAULT_ACADEMIC_SEMESTERS.map((sem) => {
           const isCurrent = sem.status === 'current';
           return (
@@ -350,16 +357,6 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
             >
               الفصل الثاني
             </button>
-            <button
-              onClick={() => setSelectedSemester('3')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedSemester === '3'
-                  ? 'bg-white text-emerald-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              الفصل الثالث
-            </button>
           </div>
         </div>
 
@@ -459,7 +456,7 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
                       {renderTypeBadge(evt.type)}
                       {evt.semester && (
                         <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">
-                          {evt.semester === '1' ? 'الفصل الأول' : evt.semester === '2' ? 'الفصل الثاني' : 'الفصل الثالث'}
+                          {evt.semester === '1' ? 'الفصل الأول' : 'الفصل الثاني'}
                         </span>
                       )}
                       {evt.daysCount && (
@@ -549,7 +546,6 @@ export const AcademicCalendarView: React.FC<AcademicCalendarViewProps> = ({
                   >
                     <option value="1">الفصل الدراسي الأول</option>
                     <option value="2">الفصل الدراسي الثاني</option>
-                    <option value="3">الفصل الدراسي الثالث</option>
                   </select>
                 </div>
               </div>
