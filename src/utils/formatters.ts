@@ -20,3 +20,18 @@ export function maskNationalId(id?: string | null): string {
 export function formatMaskedNationalId(id?: string | null): string {
   return maskNationalId(id);
 }
+
+/**
+ * Returns official formatted Hijri date using Um-AlQura calendar
+ */
+export function getFormattedHijriDate(date: Date = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+  } catch {
+    return '1448هـ';
+  }
+}

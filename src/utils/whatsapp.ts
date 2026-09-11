@@ -1,11 +1,12 @@
-import { StaffMember, DispatchedDocument, StaffSignature, SchoolSettings } from '../types';
+import { StaffMember, DispatchedDocument, StaffSignature, SchoolSettings, RecognitionAward } from '../types';
 import { maskNationalId } from './formatters';
 
 /**
  * Clean and standardize Saudi mobile numbers to international format (966XXXXXXXXX)
  */
-export function formatSaudiPhone(phone: string): string {
-  let cleaned = phone.replace(/[^0-9+]/g, '');
+export function formatSaudiPhone(phone?: string | null): string {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/[^0-9+]/g, '');
   
   if (cleaned.startsWith('+966')) {
     cleaned = cleaned.substring(1);
@@ -23,12 +24,13 @@ export function formatSaudiPhone(phone: string): string {
 /**
  * Format local display Saudi phone: 05X XXX XXXX
  */
-export function formatDisplayPhone(phone: string): string {
-  const cleaned = phone.replace(/[^0-9]/g, '');
+export function formatDisplayPhone(phone?: string | null): string {
+  if (!phone) return '—';
+  const cleaned = String(phone).replace(/[^0-9]/g, '');
   if (cleaned.length === 10 && cleaned.startsWith('05')) {
     return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
   }
-  return phone;
+  return String(phone);
 }
 
 /**
@@ -156,3 +158,38 @@ ${docUrl}
   const url = `https://wa.me/${cleanAdminPhone}?text=${encoded}`;
   return { url, text, cleanAdminPhone };
 }
+
+/**
+ * Generate congratulatory WhatsApp message and link for Certificate of Appreciation / Recognition
+ */
+export function generateRecognitionWhatsApp(
+  staff: StaffMember,
+  award: RecognitionAward,
+  schoolSettings: SchoolSettings
+): { url: string; text: string; cleanPhone: string } {
+  const cleanPhone = formatSaudiPhone(staff.phone);
+  
+  const text = `🎉 *شهادة شكر وتقدير وتحفيز متميز* 🌟
+السلام عليكم ورحمة الله وبركاته
+المكرم الزميل الفاضل/ ${staff.name} المحترم
+(الهوية الوطنية: ${maskNationalId(staff.nationalId)})
+${staff.roleTitle} - ${schoolSettings.schoolName}
+
+يسر إدارة ${schoolSettings.schoolName} أن تتقدم لكم بأسمى عبارات الشكر والتقدير والامتنان:
+🏅 *المناسبة:* ${award.title}
+✨ *السبب:* ${award.categoryTitle}
+⭐ *النقاط الممنوحة:* +${award.points} نقطة تميز
+🔢 *رقم الشهادة المعتمد:* ${award.certificateNumber}
+📅 *التاريخ:* ${award.hijriDate} (${award.date})
+
+📜 *نص الإشادة والتقدير:*
+"${award.details}"
+
+شاكرين ومقدرين جهودكم المخلصة وعطاءكم المميز في الميدان التعليمي وانضباطكم المشهود.
+إدارة المجمع: ${schoolSettings.principalName}`;
+
+  const encoded = encodeURIComponent(text);
+  const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
+  return { url, text, cleanPhone };
+}
+

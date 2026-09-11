@@ -56,10 +56,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     // Find staff member by National ID or Phone
-    const foundStaff = staffList.find(s => 
-      s.nationalId.trim() === cleanInput || 
-      s.phone.replace(/[^0-9]/g, '').endsWith(cleanInput.replace(/[^0-9]/g, ''))
-    );
+    const cleanDigits = cleanInput.replace(/[^0-9]/g, '');
+    const foundStaff = staffList.find(s => {
+      const sNatId = (s.nationalId || '').trim();
+      const sPhoneDigits = (s.phone || '').replace(/[^0-9]/g, '');
+      return (
+        sNatId === cleanInput || 
+        (cleanDigits.length > 0 && sPhoneDigits.length > 0 && sPhoneDigits.endsWith(cleanDigits))
+      );
+    });
 
     if (!foundStaff) {
       setStaffError('لم يتم العثور على موظف مسجل بهذا السجل المدني أو رقم الجوال');
@@ -67,7 +72,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     // Check PIN (default is last 4 digits of National ID)
-    const expectedPin = foundStaff.pin || foundStaff.nationalId.slice(-4);
+    const expectedPin = foundStaff.pin || (foundStaff.nationalId ? foundStaff.nationalId.slice(-4) : '1234');
     if (pin.trim() !== expectedPin) {
       setStaffError(`رمز الدخول السري غير صحيح. (تلميح: الرمز الافتراضي هو آخر 4 أرقام من سجلك المدني: ${expectedPin})`);
       return;
@@ -83,8 +88,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   // Quick Demo Login for Staff
   const handleQuickStaffSelect = (staff: StaffMember) => {
-    setNationalIdOrPhone(staff.nationalId);
-    setPin(staff.pin || staff.nationalId.slice(-4));
+    setNationalIdOrPhone(staff.nationalId || '');
+    setPin(staff.pin || (staff.nationalId ? staff.nationalId.slice(-4) : '1234'));
     setStaffError('');
   };
 
@@ -105,11 +110,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
       (p === targetAdminPass || (targetAdminPass === 'admin' && (p === 'admin' || p === '1234' || p === '1448' || p === '1446' || p === '2030')));
 
     // 2) principal or vice principal login
-    const isPrincipal = staffList.some(s => 
-      (s.role === 'principal' || s.role === 'vice_principal') && 
-      (s.nationalId === u || s.phone.endsWith(u)) &&
-      (p === s.pin || p === s.nationalId.slice(-4) || p === targetAdminPass || p === 'admin')
-    );
+    const isPrincipal = staffList.some(s => {
+      const sNatId = (s.nationalId || '').trim();
+      const sPhone = (s.phone || '').trim();
+      const sExpectedPin = s.pin || (s.nationalId ? s.nationalId.slice(-4) : '');
+      return (
+        (s.role === 'principal' || s.role === 'vice_principal') && 
+        (sNatId === u || (sPhone.length > 0 && sPhone.endsWith(u))) &&
+        (p === sExpectedPin || p === targetAdminPass || p === 'admin')
+      );
+    });
 
     if (isMasterAdmin || isPrincipal) {
       onLoginSuccess({

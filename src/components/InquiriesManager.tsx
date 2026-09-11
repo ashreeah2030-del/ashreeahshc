@@ -37,7 +37,7 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
   onOpenSignPortal,
   onOpenAuditModal,
 }) => {
-  const currentYearDigits = schoolSettings.academicYear.replace(/[^0-9]/g, '') || '1448';
+  const currentYearDigits = (schoolSettings?.academicYear || '1448').replace(/[^0-9]/g, '') || '1448';
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState('');

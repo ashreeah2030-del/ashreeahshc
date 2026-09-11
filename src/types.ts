@@ -21,6 +21,7 @@ export interface StaffMember {
   subject?: string; // e.g. "رياضيات", "علوم", "دراسات إسلامية"
   notes?: string;
   pin?: string; // 4-digit secret PIN for login (defaults to last 4 digits of nationalId)
+  points?: number; // Total motivation points earned
   active: boolean;
 }
 
@@ -124,3 +125,30 @@ export interface CircularTemplate {
   updatedAt?: string;
   isSystemDefault?: boolean;
 }
+
+export type RecognitionCategory = 
+  | 'morning_assembly' // المشاركة في انضباط الطابور الصباحي
+  | 'ideal_lesson'     // تأدية حصة مثالية
+  | 'supervision'      // المشاركة في الإشراف
+  | 'custom';          // تحفيز وتكريم خاص
+
+export interface RecognitionAward {
+  id: string;
+  staffId: string;
+  staffName: string;
+  staffNationalId: string;
+  staffPhone: string;
+  roleTitle: string;
+  category: RecognitionCategory;
+  categoryTitle: string; // e.g. "المشاركة في انضباط الطابور الصباحي"
+  title: string; // e.g. "شهادة شكر وتقدير لانضباط الطابور الصباحي"
+  details: string; // نص الثناء والشكر المكتوب في الشهادة
+  points: number; // النقاط الممنوحة
+  date: string;
+  hijriDate: string;
+  certificateNumber: string; // رقم الشهادة المعتمد
+  awardedBy: string; // إدارة المدرسة / مدير المجمع
+  notes?: string;
+  createdAt: string;
+}
+

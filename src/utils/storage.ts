@@ -1,4 +1,4 @@
-import { StaffMember, DispatchedDocument, SchoolSettings, StaffSignature, AuthSession, CircularTemplate } from '../types';
+import { StaffMember, DispatchedDocument, SchoolSettings, StaffSignature, AuthSession, CircularTemplate, RecognitionAward } from '../types';
 import { INITIAL_STAFF_MEMBERS, INITIAL_DISPATCHED_DOCUMENTS, DEFAULT_SCHOOL_SETTINGS } from '../data/sampleStaff';
 import { INITIAL_CIRCULAR_TEMPLATES } from '../data/sampleTemplates';
 
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'shariah_platform_settings_v1',
   AUTH: 'shariah_platform_auth_session_v1',
   TEMPLATES: 'shariah_platform_templates_v1',
+  RECOGNITION: 'shariah_platform_recognition_v1',
 };
 
 export function loadStaffMembers(): StaffMember[] {
@@ -23,7 +24,8 @@ export function loadStaffMembers(): StaffMember[] {
       if (Array.isArray(parsed)) {
         return parsed.map((m: StaffMember) => ({
           ...m,
-          pin: m.pin || m.nationalId?.slice(-4) || '1234'
+          pin: m.pin || m.nationalId?.slice(-4) || '1234',
+          points: typeof m.points === 'number' ? m.points : 0
         }));
       }
     }
@@ -95,7 +97,7 @@ export function loadDocuments(): DispatchedDocument[] {
           .filter((doc: DispatchedDocument) => {
             // Remove sample inquiry doc if it was specifically targeting deleted staff-17
             if (doc.type === 'inquiry' && doc.inquiryData?.staffId && doc.inquiryData.staffId !== 'staff-1' && doc.inquiryData.staffId !== 'staff-2') {
-              const num = parseInt(doc.inquiryData.staffId.replace('staff-', ''), 10);
+              const num = parseInt(String(doc.inquiryData.staffId).replace('staff-', ''), 10);
               if (!isNaN(num) && num >= 3 && num <= 20) {
                 docsChanged = true;
                 return false;
@@ -105,26 +107,26 @@ export function loadDocuments(): DispatchedDocument[] {
           })
           .map((doc: DispatchedDocument) => {
             let docCopy = { ...doc };
-            if (docCopy.hijriDate && docCopy.hijriDate.includes('1446')) {
+            if (typeof docCopy.hijriDate === 'string' && docCopy.hijriDate.includes('1446')) {
               docCopy.hijriDate = docCopy.hijriDate.replace(/1446/g, '1448');
               docsChanged = true;
             }
-            if (docCopy.referenceNumber && docCopy.referenceNumber.includes('1446/')) {
+            if (typeof docCopy.referenceNumber === 'string' && docCopy.referenceNumber.includes('1446/')) {
               docCopy.referenceNumber = docCopy.referenceNumber.replace(/1446\//g, '1448/');
               docsChanged = true;
             }
-            if (docCopy.title && docCopy.title.includes('1446/')) {
+            if (typeof docCopy.title === 'string' && docCopy.title.includes('1446/')) {
               docCopy.title = docCopy.title.replace(/1446\//g, '1448/');
               docsChanged = true;
             }
             if (docCopy.circularData) {
               let circChanged = false;
               let updatedCirc = { ...docCopy.circularData };
-              if (updatedCirc.hijriDate?.includes('1446')) {
+              if (typeof updatedCirc.hijriDate === 'string' && updatedCirc.hijriDate.includes('1446')) {
                 updatedCirc.hijriDate = updatedCirc.hijriDate.replace(/1446/g, '1448');
                 circChanged = true;
               }
-              if (updatedCirc.circularNumber?.includes('1446/')) {
+              if (typeof updatedCirc.circularNumber === 'string' && updatedCirc.circularNumber.includes('1446/')) {
                 updatedCirc.circularNumber = updatedCirc.circularNumber.replace(/1446\//g, '1448/');
                 circChanged = true;
               }
@@ -136,15 +138,15 @@ export function loadDocuments(): DispatchedDocument[] {
             if (docCopy.inquiryData) {
               let inqChanged = false;
               let updatedInq = { ...docCopy.inquiryData };
-              if (updatedInq.hijriDate?.includes('1446')) {
+              if (typeof updatedInq.hijriDate === 'string' && updatedInq.hijriDate.includes('1446')) {
                 updatedInq.hijriDate = updatedInq.hijriDate.replace(/1446/g, '1448');
                 inqChanged = true;
               }
-              if (updatedInq.inquiryNumber?.includes('1446/')) {
+              if (typeof updatedInq.inquiryNumber === 'string' && updatedInq.inquiryNumber.includes('1446/')) {
                 updatedInq.inquiryNumber = updatedInq.inquiryNumber.replace(/1446\//g, '1448/');
                 inqChanged = true;
               }
-              if (updatedInq.details?.includes('1446')) {
+              if (typeof updatedInq.details === 'string' && updatedInq.details.includes('1446')) {
                 updatedInq.details = updatedInq.details.replace(/1446/g, '1448');
                 inqChanged = true;
               }
@@ -154,12 +156,12 @@ export function loadDocuments(): DispatchedDocument[] {
               }
             }
             // Filter targetStaffIds to remove old deleted dummy staff
-            if (docCopy.targetStaffIds && docCopy.targetStaffIds.some(id => {
-              const num = parseInt(id.replace('staff-', ''), 10);
+            if (Array.isArray(docCopy.targetStaffIds) && docCopy.targetStaffIds.some(id => {
+              const num = parseInt(String(id || '').replace('staff-', ''), 10);
               return !isNaN(num) && num >= 3 && num <= 20;
             })) {
               docCopy.targetStaffIds = docCopy.targetStaffIds.filter(id => {
-                const num = parseInt(id.replace('staff-', ''), 10);
+                const num = parseInt(String(id || '').replace('staff-', ''), 10);
                 return isNaN(num) || num < 3 || num > 20;
               });
               if (docCopy.targetStaffIds.length === 0 && docCopy.type === 'circular') {
@@ -168,16 +170,16 @@ export function loadDocuments(): DispatchedDocument[] {
               docsChanged = true;
             }
             // Filter signatures to remove signatures from deleted dummy staff
-            if (docCopy.signatures) {
+            if (docCopy.signatures && typeof docCopy.signatures === 'object') {
               const cleanedSigs: Record<string, StaffSignature> = {};
               let sigsChanged = false;
               Object.entries(docCopy.signatures).forEach(([key, sig]) => {
-                const num = parseInt(key.replace('staff-', ''), 10);
+                const num = parseInt(String(key || '').replace('staff-', ''), 10);
                 if (!isNaN(num) && num >= 3 && num <= 20) {
                   sigsChanged = true;
                 } else {
                   let updatedSig = { ...sig };
-                  if (updatedSig.formattedDate && updatedSig.formattedDate.includes('1446/')) {
+                  if (typeof updatedSig.formattedDate === 'string' && updatedSig.formattedDate.includes('1446/')) {
                     updatedSig.formattedDate = updatedSig.formattedDate.replace(/1446\//g, '1448/');
                     sigsChanged = true;
                   }
@@ -307,6 +309,7 @@ export function resetToDefaults(): void {
   localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
   localStorage.removeItem(STORAGE_KEYS.SETTINGS);
   localStorage.removeItem(STORAGE_KEYS.TEMPLATES);
+  localStorage.removeItem(STORAGE_KEYS.RECOGNITION);
 }
 
 export function loadCircularTemplates(): CircularTemplate[] {
@@ -369,3 +372,96 @@ export function deleteCircularTemplate(id: string): CircularTemplate[] {
   saveCircularTemplates(updated);
   return updated;
 }
+
+// -------------------------------------------------------------
+// Recognition and Motivation Storage Functions (تكريم وتحفيز)
+// -------------------------------------------------------------
+
+export function loadRecognitionAwards(): RecognitionAward[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.RECOGNITION);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading recognition awards from localStorage:', e);
+  }
+  return [];
+}
+
+export function saveRecognitionAwards(awards: RecognitionAward[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.RECOGNITION, JSON.stringify(awards));
+  } catch (e) {
+    console.error('Error saving recognition awards to localStorage:', e);
+  }
+}
+
+export function addRecognitionAward(
+  awardData: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>,
+  currentStaffList?: StaffMember[]
+): { newAward: RecognitionAward; updatedAwards: RecognitionAward[]; updatedStaff: StaffMember[] } {
+  const awards = loadRecognitionAwards();
+  const staffList = currentStaffList && currentStaffList.length > 0 ? currentStaffList : loadStaffMembers();
+  
+  const serial = awards.length + 1;
+  const certificateNumber = `TAK-1448-${String(serial).padStart(4, '0')}`;
+  
+  const newAward: RecognitionAward = {
+    ...awardData,
+    id: `award-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    certificateNumber,
+    createdAt: new Date().toISOString(),
+  };
+
+  const updatedAwards = [newAward, ...awards];
+  saveRecognitionAwards(updatedAwards);
+
+  // Increment staff member's total points
+  const updatedStaff = staffList.map(s => {
+    if (s.id === awardData.staffId) {
+      const currentPts = typeof s.points === 'number' ? s.points : 0;
+      return {
+        ...s,
+        points: currentPts + (awardData.points || 0),
+      };
+    }
+    return s;
+  });
+  saveStaffMembers(updatedStaff);
+
+  return { newAward, updatedAwards, updatedStaff };
+}
+
+export function deleteRecognitionAward(
+  awardId: string,
+  currentStaffList?: StaffMember[]
+): { updatedAwards: RecognitionAward[]; updatedStaff: StaffMember[] } {
+  const awards = loadRecognitionAwards();
+  const staffList = currentStaffList && currentStaffList.length > 0 ? currentStaffList : loadStaffMembers();
+  
+  const target = awards.find(a => a.id === awardId);
+  const updatedAwards = awards.filter(a => a.id !== awardId);
+  saveRecognitionAwards(updatedAwards);
+
+  let updatedStaff = staffList;
+  if (target) {
+    updatedStaff = staffList.map(s => {
+      if (s.id === target.staffId) {
+        const currentPts = typeof s.points === 'number' ? s.points : 0;
+        return {
+          ...s,
+          points: Math.max(0, currentPts - (target.points || 0)),
+        };
+      }
+      return s;
+    });
+    saveStaffMembers(updatedStaff);
+  }
+
+  return { updatedAwards, updatedStaff };
+}
+

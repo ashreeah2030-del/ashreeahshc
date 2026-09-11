@@ -15,18 +15,20 @@ import {
   User,
   BarChart3,
   KeyRound,
-  Calendar
+  Calendar,
+  Award
 } from 'lucide-react';
 import { SchoolSettings, StaffMember, DispatchedDocument, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
 import { CircularProgress } from './CircularProgress';
 
 interface HeaderProps {
-  activeTab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal';
-  setActiveTab: (tab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal') => void;
+  activeTab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'recognition' | 'calendar' | 'settings' | 'portal';
+  setActiveTab: (tab: 'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'recognition' | 'calendar' | 'settings' | 'portal') => void;
   schoolSettings: SchoolSettings;
   staffList: StaffMember[];
   documents: DispatchedDocument[];
+  awardsCount?: number;
   authSession: AuthSession | null;
   onLogout: () => void;
   onOpenTeacherSimulator: () => void;
@@ -39,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   schoolSettings,
   staffList,
   documents,
+  awardsCount = 0,
   authSession,
   onLogout,
   onOpenTeacherSimulator,
@@ -297,6 +300,26 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FileCheck className="w-4 h-4" />
               <span>كشوفات التواقيع والتدقيق</span>
+            </button>
+
+            <button
+              id="tab-recognition"
+              onClick={() => setActiveTab('recognition')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'recognition'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs ring-1 ring-amber-400 font-black'
+                  : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-900'
+              }`}
+            >
+              <Award className={`w-4 h-4 ${activeTab === 'recognition' ? 'text-slate-950' : 'text-amber-600'}`} />
+              <span>تكريم وتحفيز</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black ${
+                activeTab === 'recognition'
+                  ? 'bg-slate-950 text-white'
+                  : 'bg-amber-100 text-amber-900 border border-amber-300'
+              }`}>
+                {awardsCount}
+              </span>
             </button>
 
             <button

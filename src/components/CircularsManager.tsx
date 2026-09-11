@@ -64,7 +64,7 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
   const [saveTemplateCategory, setSaveTemplateCategory] = useState<CircularTemplate['category']>('انضباط ودوام');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
 
-  const currentYearDigits = schoolSettings.academicYear.replace(/[^0-9]/g, '') || '1448';
+  const currentYearDigits = (schoolSettings?.academicYear || '1448').replace(/[^0-9]/g, '') || '1448';
 
   // Form State for new circular
   const [title, setTitle] = useState('');
@@ -122,7 +122,7 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
       alert('يرجى كتابة عنوان التعميم ومحتواه أولاً لحفظه كقالب.');
       return;
     }
-    setSaveTemplateName(title.replace(/^تعميم\s*(بشأن\s*)?/, '').trim() || 'قالب تعميم جديد');
+    setSaveTemplateName((title || '').replace(/^تعميم\s*(بشأن\s*)?/, '').trim() || 'قالب تعميم جديد');
     setIsSaveAsTemplateModalOpen(true);
   };
 

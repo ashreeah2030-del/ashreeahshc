@@ -3,7 +3,8 @@ import {
   StaffMember, 
   DispatchedDocument, 
   SchoolSettings, 
-  StaffSignature 
+  StaffSignature,
+  RecognitionAward
 } from '../types';
 import { 
   Building2, 
@@ -22,17 +23,26 @@ import {
   Printer, 
   FileCheck,
   Check,
-  Calendar
+  Calendar,
+  Award,
+  Sparkles,
+  Trophy,
+  Star,
+  Crown,
+  Flame,
+  GraduationCap
 } from 'lucide-react';
-import { formatDisplayPhone } from '../utils/whatsapp';
+import { formatDisplayPhone, generateRecognitionWhatsApp } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
 import { AcademicCalendarView } from './AcademicCalendarView';
 import { maskNationalId } from '../utils/formatters';
+import { CertificateModal } from './CertificateModal';
 
 interface StaffPortalViewProps {
   currentStaff: StaffMember;
   documents: DispatchedDocument[];
   schoolSettings: SchoolSettings;
+  awards?: RecognitionAward[];
   onOpenDoc: (docId: string, staffId: string) => void;
   onUpdatePin: (newPin: string) => void;
   onLogout: () => void;
@@ -42,17 +52,27 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   currentStaff,
   documents,
   schoolSettings,
+  awards = [],
   onOpenDoc,
   onUpdatePin,
   onLogout,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'inquiries' | 'circulars' | 'history' | 'calendar'>('inquiries');
+  const [activeSubTab, setActiveSubTab] = useState<'points' | 'inquiries' | 'circulars' | 'history' | 'calendar'>('points');
   
   // PIN change state
   const [isChangingPin, setIsChangingPin] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState(false);
   const [showMyNationalId, setShowMyNationalId] = useState(false);
+
+  // Certificate modal preview
+  const [viewingAward, setViewingAward] = useState<RecognitionAward | null>(null);
+
+  // Filter awards belonging to this staff member
+  const myAwards = awards.filter(a => a.staffId === currentStaff.id);
+  const myTotalPoints = typeof currentStaff.points === 'number'
+    ? currentStaff.points
+    : myAwards.reduce((sum, a) => sum + (a.points || 0), 0);
 
   // Filter documents belonging to THIS staff member only!
   // Inquiries strictly issued to this staff member
@@ -161,7 +181,22 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           </div>
 
           {/* Quick Staff Details Bar */}
-          <div className="mt-5 pt-4 border-t border-emerald-800/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="mt-5 pt-4 border-t border-emerald-800/60 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            {/* Points Card with direct click to points tab */}
+            <div 
+              onClick={() => setActiveSubTab('points')}
+              className="bg-amber-950/80 p-2 rounded-xl border border-amber-500/50 border-r-3 border-r-amber-400 cursor-pointer hover:bg-amber-900/90 transition-colors col-span-2 sm:col-span-1 shadow-xs"
+              title="اضغط للاطلاع على رصيد نقاطك وسجل التكريم"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-amber-300 block text-[10px] font-bold">رصيد نقاطي:</span>
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <span className="font-mono font-black text-amber-300 text-sm block mt-0.5">
+                {myTotalPoints} <span className="text-[10px] font-sans text-amber-200">نقطة تميز</span>
+              </span>
+            </div>
+
             <div className="bg-slate-900/60 p-2 rounded-xl border border-emerald-800/40 border-r-3 border-r-amber-400">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 block text-[10px]">الهوية الوطنية (محمية):</span>
@@ -255,7 +290,23 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       </div>
 
       {/* Navigation Subtabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs sm:text-sm font-bold">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs sm:text-sm font-bold overflow-x-auto no-scrollbar">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('points')}
+          className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeSubTab === 'points'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs ring-1 ring-amber-400'
+              : 'text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <Award className="w-4 h-4 text-amber-600" />
+          <span>نقاطي (التكريم والتحفيز)</span>
+          <span className="bg-amber-400 text-slate-950 text-[10px] font-mono font-black px-2 py-0.5 rounded-full shadow-2xs">
+            {myTotalPoints} نقطة
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveSubTab('inquiries')}
@@ -655,6 +706,265 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
         <AcademicCalendarView
           schoolSettings={schoolSettings}
           isStaffPortal={true}
+        />
+      )}
+
+      {/* Tab Content: POINTS & RECOGNITION (نقاطي وتكريمي) */}
+      {activeSubTab === 'points' && (
+        <div className="space-y-6">
+          {/* Top Honor & Rank Showcase */}
+          <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-600 rounded-3xl p-6 sm:p-8 text-slate-950 shadow-md relative overflow-hidden">
+            {/* Background decorative patterns */}
+            <div className="absolute -top-10 -left-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-black/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="text-center md:text-right space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-1.5 bg-slate-950/20 backdrop-blur-xs px-3 py-1 rounded-full text-xs font-black text-slate-950">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+                  <span>برنامج التحفيز والتكريم المستمر لمنسوبي المجمع</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                  رصيدك الحالي: {myTotalPoints} نقطة تميز
+                </h2>
+
+                <p className="text-sm font-semibold text-slate-900 leading-relaxed">
+                  {myTotalPoints >= 100 ? (
+                    '👑 رائع جداً! أنت ضمن نخبة المعلمين المتميزين فـارس المجمع. نشكر لك عطاءك اللامحدود وانضباطك القيادي.'
+                  ) : myTotalPoints >= 50 ? (
+                    '🥈 أداء متقدم ومبهر! واصل تميزك في الميدان التعليمي والتربوي لتصل إلى وسام فارس المجمع.'
+                  ) : myTotalPoints >= 25 ? (
+                    '🥉 بداية مشرفة وبصمة طيبة! كل مشاركة في الطابور أو الإشراف ترفع رصيدك وتُخلّد عطاءك.'
+                  ) : (
+                    '🌱 مرحباً بك في مسار التميز! اجمع النقاط من خلال التزام الطابور الصباحي، الحصص النموذجية، والإشراف المدرسي.'
+                  )}
+                </p>
+
+                <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-2">
+                  <span className="bg-slate-950 text-amber-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <span>
+                      {myTotalPoints >= 100
+                        ? 'وسام التميز الذهبي (فارس المجمع)'
+                        : myTotalPoints >= 50
+                        ? 'وسام العطاء الفضي (معلم متميز)'
+                        : myTotalPoints >= 25
+                        ? 'وسام المبادرة البرونزي'
+                        : 'وسام المشاركة والانضباط'}
+                    </span>
+                  </span>
+                  <span className="bg-white/40 text-slate-950 px-3 py-1 rounded-xl text-xs font-bold">
+                    إجمالي شهادات الشكر: {myAwards.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Big Score Medal Circle */}
+              <div className="shrink-0 flex flex-col items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-slate-950 text-amber-400 border-4 border-amber-300/80 shadow-xl flex flex-col items-center justify-center p-3 relative">
+                  <Trophy className="w-6 h-6 text-amber-300 mb-0.5" />
+                  <span className="font-mono font-black text-3xl sm:text-4xl text-white tracking-tight leading-none">
+                    {myTotalPoints}
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mt-1">
+                    نقطة تميز
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-breakdown Cards */}
+            <div className="mt-6 pt-5 border-t border-slate-950/15 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
+                <span className="text-slate-800 block text-[10px] font-bold">انضباط الطابور الصباحي:</span>
+                <span className="font-mono font-black text-slate-950 text-base">
+                  {myAwards.filter(a => a.category === 'morning_assembly').reduce((s, a) => s + a.points, 0)} نقطة
+                </span>
+              </div>
+              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
+                <span className="text-slate-800 block text-[10px] font-bold">تأدية حصة مثالية:</span>
+                <span className="font-mono font-black text-slate-950 text-base">
+                  {myAwards.filter(a => a.category === 'ideal_lesson').reduce((s, a) => s + a.points, 0)} نقطة
+                </span>
+              </div>
+              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
+                <span className="text-slate-800 block text-[10px] font-bold">الإشراف والمناوبة:</span>
+                <span className="font-mono font-black text-slate-950 text-base">
+                  {myAwards.filter(a => a.category === 'supervision').reduce((s, a) => s + a.points, 0)} نقطة
+                </span>
+              </div>
+              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
+                <span className="text-slate-800 block text-[10px] font-bold">مبادرات وتكريمات:</span>
+                <span className="font-mono font-black text-slate-950 text-base">
+                  {myAwards.filter(a => a.category === 'other').reduce((s, a) => s + a.points, 0)} نقطة
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Official Certificates of Appreciation */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-500" />
+                  <span>شهادات الشكر والتقدير الرسمية الممنوحة لك ({myAwards.length})</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  شهادات رسمية معتمدة من إدارة المجمع قابلة للطباعة بدقة عالية والمشاركة عبر الواتس أب
+                </p>
+              </div>
+            </div>
+
+            {myAwards.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-8 text-center space-y-3 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+                  <Award className="w-7 h-7" />
+                </div>
+                <h4 className="font-black text-slate-800 text-sm">لا توجد شهادات شكر مسجلة بعد</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                  تمنح إدارة المجمع شهادات الشكر ونقاط التميز تلقائياً للمشاركين في انضباط الطابور الصباحي، وتأدية الحصص الدراسية النموذجية، ومناوبة الإشراف اليومي. ستظهر شهاداتك فور إصدارها هنا.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myAwards.map((award) => (
+                  <div
+                    key={award.id}
+                    className="bg-white rounded-2xl border border-slate-200/90 hover:border-amber-400 p-5 shadow-xs transition-all flex flex-col justify-between group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+                            <Award className="w-5 h-5" />
+                          </span>
+                          <div>
+                            <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              {award.certificateNumber}
+                            </span>
+                            <h4 className="font-black text-slate-900 text-sm mt-0.5 group-hover:text-emerald-800 transition-colors">
+                              {award.title}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-black text-xs px-2.5 py-1 rounded-lg shrink-0">
+                          +{award.points} نقطة
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                        {award.reason}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                        <span>التاريخ: {award.date}</span>
+                        {award.hijriDate && <span>الموافق: {award.hijriDate}</span>}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewingAward(award)}
+                        className="flex-1 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>معاينة وطباعة الشهادة</span>
+                      </button>
+
+                      {currentStaff.phone && (
+                        <a
+                          href={generateRecognitionWhatsApp(award, currentStaff, schoolSettings)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          title="إرسال عبر الواتس أب"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">واتساب</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Detailed Points Ledger */}
+          {myAwards.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-700" />
+                  <span>سجل حركات نقاط التميز المعتمدة</span>
+                </h4>
+                <span className="text-xs font-bold text-slate-500">
+                  الإجمالي: {myTotalPoints} نقطة
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-100/75 text-slate-600 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">#</th>
+                      <th className="p-3">تاريخ الاستحقاق</th>
+                      <th className="p-3">المجال / الفئة</th>
+                      <th className="p-3">رقم الشهادة</th>
+                      <th className="p-3">بيان التميز</th>
+                      <th className="p-3 text-center">النقاط المكتسبة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {myAwards.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className="font-mono text-slate-700">{item.date}</span>
+                          {item.hijriDate && (
+                            <span className="block text-[10px] text-slate-400 font-sans">{item.hijriDate}</span>
+                          )}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.category === 'morning_assembly' ? 'bg-amber-100 text-amber-900 border border-amber-200' :
+                            item.category === 'ideal_lesson' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' :
+                            item.category === 'supervision' ? 'bg-blue-100 text-blue-900 border border-blue-200' :
+                            'bg-purple-100 text-purple-900 border border-purple-200'
+                          }`}>
+                            {item.category === 'morning_assembly' ? 'انضباط الطابور الصباحي' :
+                             item.category === 'ideal_lesson' ? 'حصة دراسية مثالية' :
+                             item.category === 'supervision' ? 'الإشراف والمناوبة' : 'تكريم ومبادرات'}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono font-bold text-amber-800">{item.certificateNumber}</td>
+                        <td className="p-3 text-slate-700 max-w-xs">{item.reason}</td>
+                        <td className="p-3 text-center">
+                          <span className="font-mono font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-xs">
+                            +{item.points}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Certificate Print & Preview Modal */}
+      {viewingAward && (
+        <CertificateModal
+          award={viewingAward}
+          staff={currentStaff}
+          schoolSettings={schoolSettings}
+          onClose={() => setViewingAward(null)}
         />
       )}
     </div>

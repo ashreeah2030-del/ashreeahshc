@@ -157,7 +157,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       errors.nationalId = 'يجب أن يتكون السجل المدني من 10 أرقام بالضبط';
     }
 
-    const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+    const cleanPhone = (formData.phone || '').replace(/[^0-9]/g, '');
     if (!cleanPhone || cleanPhone.length < 9) {
       errors.phone = 'الرجاء إدخال رقم جوال صحيح (مثال: 0501234567)';
     }
@@ -225,8 +225,8 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       if (parts.length >= 3) {
         // Expected format: Name, NationalID, Phone, RoleTitle, Stage, Subject
         const name = parts[0];
-        const nationalId = parts[1].replace(/[^0-9]/g, '');
-        const phone = parts[2].replace(/[^0-9+]/g, '');
+        const nationalId = (parts[1] || '').replace(/[^0-9]/g, '');
+        const phone = (parts[2] || '').replace(/[^0-9+]/g, '');
         const roleTitle = parts[3] || 'معلم';
         const stageStr = parts[4] || 'all';
         const subject = parts[5] || '';

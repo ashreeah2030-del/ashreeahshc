@@ -4,7 +4,8 @@ import {
   DispatchedDocument, 
   SchoolSettings, 
   StaffSignature,
-  AuthSession
+  AuthSession,
+  RecognitionAward
 } from './types';
 import { ArrowUp } from 'lucide-react';
 import { 
@@ -19,7 +20,10 @@ import {
   resetToDefaults,
   loadAuthSession,
   saveAuthSession,
-  updateStaffPin
+  updateStaffPin,
+  loadRecognitionAwards,
+  addRecognitionAward,
+  deleteRecognitionAward
 } from './utils/storage';
 import { Header } from './components/Header';
 import { StaffDirectory } from './components/StaffDirectory';
@@ -35,6 +39,7 @@ import { LoginView } from './components/LoginView';
 import { StaffPortalView } from './components/StaffPortalView';
 import { ChangePasscodeModal } from './components/ChangePasscodeModal';
 import { AcademicCalendarView } from './components/AcademicCalendarView';
+import { RecognitionManager } from './components/RecognitionManager';
 
 export default function App() {
   // Authentication State
@@ -43,8 +48,9 @@ export default function App() {
   // Main Data State
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [documents, setDocuments] = useState<DispatchedDocument[]>([]);
+  const [awards, setAwards] = useState<RecognitionAward[]>([]);
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(loadSchoolSettings());
-  const [activeTab, setActiveTab] = useState<'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'calendar' | 'settings' | 'portal'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'circulars' | 'inquiries' | 'audits' | 'reports' | 'recognition' | 'calendar' | 'settings' | 'portal'>('staff');
 
   // Interactive Modals
   const [auditDoc, setAuditDoc] = useState<DispatchedDocument | null>(null);
@@ -74,10 +80,12 @@ export default function App() {
     const loadedStaff = loadStaffMembers();
     const loadedDocs = loadDocuments();
     const loadedSettings = loadSchoolSettings();
+    const loadedAwards = loadRecognitionAwards();
 
     setStaffList(loadedStaff);
     setDocuments(loadedDocs);
     setSchoolSettings(loadedSettings);
+    setAwards(loadedAwards);
 
     // Check URL parameters for direct WhatsApp link
     const params = new URLSearchParams(window.location.search);
@@ -213,7 +221,21 @@ export default function App() {
     setStaffList(loadStaffMembers());
     setDocuments(loadDocuments());
     setSchoolSettings(loadSchoolSettings());
+    setAwards(loadRecognitionAwards());
     alert('تمت استعادة البيانات النموذجية لمجمع الشريعة التعليمي للبنين بنجاح.');
+  };
+
+  // Handlers for Recognition and Awards
+  const handleAddAward = (awardData: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>) => {
+    const result = addRecognitionAward(awardData, staffList);
+    setAwards(result.updatedAwards);
+    setStaffList(result.updatedStaff);
+  };
+
+  const handleDeleteAward = (awardId: string) => {
+    const result = deleteRecognitionAward(awardId, staffList);
+    setAwards(result.updatedAwards);
+    setStaffList(result.updatedStaff);
   };
 
   // Open Direct Teacher Signing Portal
@@ -255,6 +277,7 @@ export default function App() {
           schoolSettings={schoolSettings}
           staffList={staffList}
           documents={documents}
+          awardsCount={awards.length}
           authSession={authSession}
           onLogout={handleLogout}
           onOpenTeacherSimulator={() => {}}
@@ -270,14 +293,20 @@ export default function App() {
               onBackToDashboard={handleCloseSignPortal}
             />
           ) : (
-            <StaffPortalView
-              currentStaff={authSession.staffMember}
-              documents={documents}
-              schoolSettings={schoolSettings}
-              onOpenDoc={handleOpenSignPortal}
-              onUpdatePin={handleUpdateStaffPin}
-              onLogout={handleLogout}
-            />
+            (() => {
+              const currentStaffInList = staffList.find(s => s.id === authSession.staffMember?.id) || authSession.staffMember;
+              return (
+                <StaffPortalView
+                  currentStaff={currentStaffInList}
+                  documents={documents}
+                  schoolSettings={schoolSettings}
+                  awards={awards}
+                  onOpenDoc={handleOpenSignPortal}
+                  onUpdatePin={handleUpdateStaffPin}
+                  onLogout={handleLogout}
+                />
+              );
+            })()
           )}
         </main>
 
@@ -321,6 +350,7 @@ export default function App() {
         schoolSettings={schoolSettings}
         staffList={staffList}
         documents={documents}
+        awardsCount={awards.length}
         authSession={authSession}
         onLogout={handleLogout}
         onOpenTeacherSimulator={() => setIsSimulatorOpen(true)}
@@ -382,6 +412,16 @@ export default function App() {
                 onOpenAuditModal={(doc) => setAuditDoc(doc)}
                 onOpenSignPortal={handleOpenSignPortal}
                 onNavigateToReports={() => setActiveTab('reports')}
+              />
+            )}
+
+            {activeTab === 'recognition' && (
+              <RecognitionManager
+                staffList={staffList}
+                schoolSettings={schoolSettings}
+                awards={awards}
+                onAddAward={handleAddAward}
+                onDeleteAward={handleDeleteAward}
               />
             )}
 

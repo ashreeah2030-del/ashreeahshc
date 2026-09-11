@@ -72,7 +72,7 @@ export const SignatureAuditModal: React.FC<SignatureAuditModalProps> = ({
 
       const element = printContainerRef.current;
       const cleanRefNumber = (doc.referenceNumber || 'DOC').replace(/[\/\\]/g, '-');
-      const filename = `كشف_توثيق_توقيعات_${cleanRefNumber}_${schoolSettings.schoolName.replace(/\s+/g, '_')}.pdf`;
+      const filename = `كشف_توثيق_توقيعات_${cleanRefNumber}_${(schoolSettings?.schoolName || 'مجمع_الشريعة').replace(/\s+/g, '_')}.pdf`;
 
       const opt = {
         margin: 8,
