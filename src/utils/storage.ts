@@ -402,10 +402,10 @@ export function loadRecognitionAwards(): RecognitionAward[] {
   return [];
 }
 
-export function saveRecognitionAwards(awards: RecognitionAward[]): void {
+export function saveRecognitionAwards(awards: RecognitionAward[], staffList?: StaffMember[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.RECOGNITION, JSON.stringify(awards));
-    syncService.pushAwards(awards);
+    syncService.pushAwards(awards, staffList);
   } catch (e) {
     console.error('Error saving recognition awards to localStorage:', e);
   }
@@ -429,11 +429,10 @@ export function addRecognitionAward(
   };
 
   const updatedAwards = [newAward, ...awards];
-  saveRecognitionAwards(updatedAwards);
 
   // Increment staff member's total points
   const updatedStaff = staffList.map(s => {
-    if (s.id === awardData.staffId) {
+    if (s.id === awardData.staffId || (s.nationalId && awardData.staffNationalId && s.nationalId === awardData.staffNationalId)) {
       const currentPts = typeof s.points === 'number' ? s.points : 0;
       return {
         ...s,
@@ -442,6 +441,8 @@ export function addRecognitionAward(
     }
     return s;
   });
+
+  saveRecognitionAwards(updatedAwards, updatedStaff);
   saveStaffMembers(updatedStaff);
 
   return { newAward, updatedAwards, updatedStaff };
@@ -466,25 +467,31 @@ export function addBulkRecognitionAwards(
   });
 
   const updatedAwards = [...newAwards, ...awards];
-  saveRecognitionAwards(updatedAwards);
 
   // Accumulate points map
   const pointsMap = new Map<string, number>();
   for (const aw of awardsDataList) {
-    const current = pointsMap.get(aw.staffId) || 0;
-    pointsMap.set(aw.staffId, current + (aw.points || 0));
+    const key = aw.staffId || aw.staffNationalId || '';
+    const current = pointsMap.get(key) || 0;
+    pointsMap.set(key, current + (aw.points || 0));
   }
 
   const updatedStaff = staffList.map(s => {
-    if (pointsMap.has(s.id)) {
+    const keyById = s.id ? pointsMap.get(s.id) : 0;
+    const keyByNat = s.nationalId ? pointsMap.get(s.nationalId) : 0;
+    const addedPoints = (keyById || 0) + (keyByNat || 0);
+
+    if (addedPoints > 0) {
       const currentPts = typeof s.points === 'number' ? s.points : 0;
       return {
         ...s,
-        points: currentPts + (pointsMap.get(s.id) || 0),
+        points: currentPts + addedPoints,
       };
     }
     return s;
   });
+
+  saveRecognitionAwards(updatedAwards, updatedStaff);
   saveStaffMembers(updatedStaff);
 
   return { newAwards, updatedAwards, updatedStaff };
@@ -499,12 +506,11 @@ export function deleteRecognitionAward(
   
   const target = awards.find(a => a.id === awardId);
   const updatedAwards = awards.filter(a => a.id !== awardId);
-  saveRecognitionAwards(updatedAwards);
 
   let updatedStaff = staffList;
   if (target) {
     updatedStaff = staffList.map(s => {
-      if (s.id === target.staffId) {
+      if (s.id === target.staffId || (s.nationalId && target.staffNationalId && s.nationalId === target.staffNationalId)) {
         const currentPts = typeof s.points === 'number' ? s.points : 0;
         return {
           ...s,
@@ -515,6 +521,8 @@ export function deleteRecognitionAward(
     });
     saveStaffMembers(updatedStaff);
   }
+
+  saveRecognitionAwards(updatedAwards, updatedStaff);
 
   return { updatedAwards, updatedStaff };
 }
@@ -528,13 +536,12 @@ export function updateRecognitionAward(
   
   const oldAward = awards.find(a => a.id === updatedAward.id);
   const updatedAwards = awards.map(a => a.id === updatedAward.id ? updatedAward : a);
-  saveRecognitionAwards(updatedAwards);
 
   let updatedStaff = staffList;
   if (oldAward && oldAward.points !== updatedAward.points) {
     const diff = (updatedAward.points || 0) - (oldAward.points || 0);
     updatedStaff = staffList.map(s => {
-      if (s.id === updatedAward.staffId) {
+      if (s.id === updatedAward.staffId || (s.nationalId && updatedAward.staffNationalId && s.nationalId === updatedAward.staffNationalId)) {
         const currentPts = typeof s.points === 'number' ? s.points : 0;
         return {
           ...s,
@@ -545,6 +552,8 @@ export function updateRecognitionAward(
     });
     saveStaffMembers(updatedStaff);
   }
+
+  saveRecognitionAwards(updatedAwards, updatedStaff);
 
   return { updatedAwards, updatedStaff };
 }

@@ -128,30 +128,27 @@ app.post('/api/sync', (req, res) => {
     }
 
     if (Array.isArray(documents)) {
-      const docMap = new Map<string, any>();
+      const existingDocMap = new Map<string, any>();
       for (const d of newStore.documents) {
-        if (d.id) docMap.set(d.id, d);
+        if (d && d.id) existingDocMap.set(d.id, d);
       }
-      for (const d of documents) {
-        if (d.id) {
-          const existing = docMap.get(d.id);
-          const mergedSignatures = { ...(existing?.signatures || {}), ...(d.signatures || {}) };
-          docMap.set(d.id, { ...existing, ...d, signatures: mergedSignatures });
+      // Preserve client's ordered list (newest first) while retaining any server-side signatures
+      newStore.documents = documents.map(d => {
+        if (!d || !d.id) return d;
+        const existing = existingDocMap.get(d.id);
+        if (existing && existing.signatures) {
+          return {
+            ...d,
+            signatures: { ...(existing.signatures || {}), ...(d.signatures || {}) },
+          };
         }
-      }
-      newStore.documents = Array.from(docMap.values());
+        return d;
+      });
       modified = true;
     }
 
     if (Array.isArray(awards)) {
-      const awardMap = new Map<string, any>();
-      for (const a of newStore.awards) {
-        if (a.id) awardMap.set(a.id, a);
-      }
-      for (const a of awards) {
-        if (a.id) awardMap.set(a.id, a);
-      }
-      newStore.awards = Array.from(awardMap.values());
+      newStore.awards = awards;
       modified = true;
     }
 

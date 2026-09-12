@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   StaffMember, 
   DispatchedDocument, 
@@ -83,54 +83,157 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     }
   };
 
+  // Helper to normalize names for robust comparison across system and Noor records
+  const normalizeText = (t?: string): string => {
+    if (!t) return '';
+    return t
+      .replace(/^الأستاذ\s+|^المعلم\s+|^الاستاذ\s+|^الوكيل\s+|^المدير\s+/g, '')
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/[^a-zA-Z0-9\u0621-\u064A]/g, '')
+      .trim();
+  };
+
+  const cleanDigits = (val?: string): string => (val ? val.replace(/[^0-9]/g, '') : '');
+
   // Helper to check if a document is signed by this staff member (by ID or National ID)
   const isDocSignedByMe = (doc: DispatchedDocument): boolean => {
+    if (!doc.signatures) return false;
     if (doc.signatures[currentStaff.id]) return true;
-    return Object.values(doc.signatures).some(
-      s => s.nationalId && currentStaff.nationalId && s.nationalId === currentStaff.nationalId
-    );
+    const curNatId = cleanDigits(currentStaff.nationalId);
+    const curNormName = normalizeText(currentStaff.name);
+
+    return Object.values(doc.signatures).some(s => {
+      if (s.staffId === currentStaff.id) return true;
+      if (curNatId && s.nationalId && cleanDigits(s.nationalId) === curNatId) return true;
+      if (curNormName && s.staffName && normalizeText(s.staffName) === curNormName) return true;
+      return false;
+    });
   };
 
   const getMySignature = (doc: DispatchedDocument): StaffSignature | undefined => {
+    if (!doc.signatures) return undefined;
     if (doc.signatures[currentStaff.id]) return doc.signatures[currentStaff.id];
-    return Object.values(doc.signatures).find(
-      s => s.nationalId && currentStaff.nationalId && s.nationalId === currentStaff.nationalId
-    );
+    const curNatId = cleanDigits(currentStaff.nationalId);
+    const curNormName = normalizeText(currentStaff.name);
+
+    return Object.values(doc.signatures).find(s => {
+      if (s.staffId === currentStaff.id) return true;
+      if (curNatId && s.nationalId && cleanDigits(s.nationalId) === curNatId) return true;
+      if (curNormName && s.staffName && normalizeText(s.staffName) === curNormName) return true;
+      return false;
+    });
   };
 
-  // Filter awards belonging to this staff member (matches staffId OR nationalId for multi-device reliability)
-  const myAwards = awards.filter(a => 
-    a.staffId === currentStaff.id || 
-    (a.staffNationalId && currentStaff.nationalId && a.staffNationalId === currentStaff.nationalId)
-  );
+  // Filter awards belonging to this staff member (matches staffId, nationalId, phone, or name)
+  const myAwards = useMemo(() => {
+    const curStaffId = currentStaff.id;
+    const curNatId = cleanDigits(currentStaff.nationalId);
+    const curPhone = cleanDigits(currentStaff.phone);
+    const curNormName = normalizeText(currentStaff.name);
 
-  const myTotalPoints = typeof currentStaff.points === 'number'
-    ? currentStaff.points
-    : myAwards.reduce((sum, a) => sum + (a.points || 0), 0);
+    return awards.filter(a => {
+      if (a.staffId && curStaffId && a.staffId === curStaffId) return true;
+      if (curNatId && cleanDigits(a.staffNationalId) === curNatId) return true;
+      if (curPhone && curPhone.length >= 9 && cleanDigits(a.staffPhone).endsWith(curPhone.slice(-9))) return true;
+      if (curNormName && normalizeText(a.staffName) === curNormName) return true;
+      return false;
+    });
+  }, [awards, currentStaff]);
+
+  // Points update dynamically as soon as a certificate is issued in the control panel
+  const myTotalPoints = useMemo(() => {
+    const pointsFromAwards = myAwards.reduce((sum, a) => sum + (a.points || 0), 0);
+    const basePts = typeof currentStaff.points === 'number' ? currentStaff.points : 0;
+    return Math.max(basePts, pointsFromAwards);
+  }, [myAwards, currentStaff.points]);
+
   const myBadge = getTeacherBadge(myTotalPoints);
 
   // Filter documents belonging to THIS staff member only!
-  // Inquiries strictly issued to this staff member
-  const myInquiries = documents.filter(doc => 
-    doc.type === 'inquiry' && 
-    (
-      doc.inquiryData?.staffId === currentStaff.id || 
-      (doc.inquiryData?.staffNationalId && currentStaff.nationalId && doc.inquiryData.staffNationalId === currentStaff.nationalId) ||
-      doc.targetStaffIds.includes(currentStaff.id)
-    )
-  );
+  // Inquiries strictly issued to this staff member (instant matching by id, national id, phone, or name)
+  const myInquiries = useMemo(() => {
+    const curStaffId = currentStaff.id;
+    const curNatId = cleanDigits(currentStaff.nationalId);
+    const curPhone = cleanDigits(currentStaff.phone);
+    const curNormName = normalizeText(currentStaff.name);
+
+    return documents.filter(doc => {
+      if (doc.type !== 'inquiry') return false;
+      const inq = doc.inquiryData;
+
+      if (inq?.staffId && curStaffId && inq.staffId === curStaffId) return true;
+      if (doc.targetStaffIds && doc.targetStaffIds.includes(curStaffId)) return true;
+
+      if (curNatId) {
+        if (inq?.staffNationalId && cleanDigits(inq.staffNationalId) === curNatId) return true;
+        if (doc.targetStaffIds && doc.targetStaffIds.some(tid => cleanDigits(tid) === curNatId)) return true;
+      }
+
+      if (curPhone && curPhone.length >= 9 && inq?.staffPhone && cleanDigits(inq.staffPhone).endsWith(curPhone.slice(-9))) {
+        return true;
+      }
+
+      if (curNormName && inq?.staffName && normalizeText(inq.staffName) === curNormName) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [documents, currentStaff]);
 
   // Circulars targeted to this staff member (all school, teachers, specific stage, or specific id)
-  const myCirculars = documents.filter(doc => {
-    if (doc.type !== 'circular') return false;
-    const aud = doc.circularData?.targetAudience || 'all';
-    if (aud === 'all') return true;
-    if (aud === 'teachers' && (currentStaff.role === 'teacher' || currentStaff.role === 'activity_leader')) return true;
-    if (aud === 'admins' && (currentStaff.role === 'admin' || currentStaff.role === 'counselor' || currentStaff.role === 'student_affairs' || currentStaff.role === 'student_affairs_vice_principal' || currentStaff.role === 'computer_lab_prep' || currentStaff.role === 'vice_principal' || currentStaff.role === 'lab_prep')) return true;
-    if (aud === currentStaff.stage) return true;
-    if (doc.targetStaffIds.includes(currentStaff.id)) return true;
-    return false;
-  });
+  const myCirculars = useMemo(() => {
+    const curStaffId = currentStaff.id;
+    const curNatId = cleanDigits(currentStaff.nationalId);
+
+    return documents.filter(doc => {
+      if (doc.type !== 'circular') return false;
+      const aud = doc.circularData?.targetAudience || 'all';
+      if (aud === 'all') return true;
+      if (aud === 'teachers' && (currentStaff.role === 'teacher' || currentStaff.role === 'activity_leader')) return true;
+      if (aud === 'admins' && (currentStaff.role === 'admin' || currentStaff.role === 'counselor' || currentStaff.role === 'student_affairs' || currentStaff.role === 'student_affairs_vice_principal' || currentStaff.role === 'computer_lab_prep' || currentStaff.role === 'vice_principal' || currentStaff.role === 'lab_prep')) return true;
+      if (aud === currentStaff.stage) return true;
+      if (doc.targetStaffIds && doc.targetStaffIds.includes(curStaffId)) return true;
+      if (curNatId && doc.targetStaffIds && doc.targetStaffIds.some(tid => cleanDigits(tid) === curNatId)) return true;
+      return false;
+    });
+  }, [documents, currentStaff]);
+
+  // Track live incoming updates from dashboard to trigger notification banners
+  const [newNotice, setNewNotice] = useState<{ type: 'inquiry' | 'award'; title: string; message: string; docId?: string } | null>(null);
+  const initialAwardsCount = useRef<number | null>(null);
+  const initialInquiriesCount = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (initialAwardsCount.current === null) {
+      initialAwardsCount.current = myAwards.length;
+    } else if (myAwards.length > initialAwardsCount.current) {
+      initialAwardsCount.current = myAwards.length;
+      const latest = myAwards[0];
+      setNewNotice({
+        type: 'award',
+        title: 'تهانينا! صدرت لك شهادة شكر وتقدير جديدة من الإدارة',
+        message: latest ? `تم منحك شهادة شكر بعنوان (${latest.title}) ورصيد إضافي +${latest.points} نقطة.` : 'تم إصدار شهادة تقدير جديدة لحسابك الآن.',
+      });
+    }
+  }, [myAwards]);
+
+  useEffect(() => {
+    if (initialInquiriesCount.current === null) {
+      initialInquiriesCount.current = myInquiries.length;
+    } else if (myInquiries.length > initialInquiriesCount.current) {
+      initialInquiriesCount.current = myInquiries.length;
+      const latest = myInquiries[0];
+      setNewNotice({
+        type: 'inquiry',
+        title: 'تنبيه إداري: تم توجيه ورقة مساءلة جديدة لحسابك',
+        message: latest ? `ورقة مساءلة برقم (${latest.referenceNumber}) بشأن (${latest.inquiryData?.reasonTitle || latest.title}) تتطلب الإفادة والتوقيع.` : 'مساءلة إدارية جديدة بانتظار اطلاعكم.',
+        docId: latest?.id,
+      });
+    }
+  }, [myInquiries]);
 
   // Signed documents history
   const mySignedHistory = documents.filter(doc => isDocSignedByMe(doc));
@@ -359,6 +462,58 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Real-time Dynamic Update Banner (When new inquiry or certificate arrives) */}
+      {newNotice && (
+        <div className={`p-4 rounded-2xl border-2 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-bounce-short transition-all ${
+          newNotice.type === 'award'
+            ? 'bg-amber-50 border-amber-400 text-amber-950'
+            : 'bg-rose-50 border-rose-500 text-rose-950'
+        }`}>
+          <div className="flex items-start sm:items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              newNotice.type === 'award' ? 'bg-amber-400 text-slate-950' : 'bg-rose-600 text-white animate-pulse'
+            }`}>
+              {newNotice.type === 'award' ? <Award className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            </div>
+            <div>
+              <h4 className="font-black text-sm">{newNotice.title}</h4>
+              <p className="text-xs mt-0.5 opacity-90">{newNotice.message}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                if (newNotice.type === 'award') {
+                  setActiveSubTab('points');
+                } else {
+                  setActiveSubTab('inquiries');
+                  if (newNotice.docId) {
+                    onOpenDoc(newNotice.docId);
+                  }
+                }
+                setNewNotice(null);
+              }}
+              className={`px-3.5 py-1.5 rounded-xl font-black text-xs cursor-pointer shadow-xs ${
+                newNotice.type === 'award'
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+              }`}
+            >
+              {newNotice.type === 'award' ? 'استعراض الشهادة والنقاط' : 'فتح ورقة المساءلة والرد'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewNotice(null)}
+              className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg cursor-pointer"
+              title="إغلاق التنبيه"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Subtabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs sm:text-sm font-bold overflow-x-auto no-scrollbar">

@@ -119,7 +119,7 @@ export const InquiriesManager: React.FC<InquiriesManagerProps> = ({
       hijriDate,
       createdAt: new Date().toISOString(),
       inquiryData: inqData,
-      targetStaffIds: [staff.id],
+      targetStaffIds: [staff.id, staff.nationalId].filter(Boolean) as string[],
       signatures: {},
     };
 

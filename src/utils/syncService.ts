@@ -24,10 +24,41 @@ class SyncService {
   private pollIntervalId: any = null;
   private isSyncing: boolean = false;
   private isOnline: boolean = true;
+  private broadcastChannel: BroadcastChannel | null = null;
 
   constructor() {
-    // Listen to focus and visibility events for instant multi-device sync
+    // 1. Cross-tab real-time instant synchronization via BroadcastChannel (<5ms latency)
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.broadcastChannel = new BroadcastChannel('shariah_platform_sync_channel');
+        this.broadcastChannel.onmessage = (event) => {
+          if (event?.data?.type === 'SYNC_DATA' && event.data.payload) {
+            const data = event.data.payload as ServerSyncData;
+            if (data.lastModified && data.lastModified >= this.lastModified) {
+              this.lastModified = data.lastModified;
+            }
+            this.notifyListeners(data);
+          }
+        };
+      } catch (e) {
+        console.warn('BroadcastChannel not supported or failed to initialize:', e);
+      }
+    }
+
+    // 2. Cross-tab fallback via storage event
     if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (
+          e.key === 'shariah_platform_documents_v1' ||
+          e.key === 'shariah_platform_recognition_v1' ||
+          e.key === 'shariah_platform_staff_v5' ||
+          e.key === 'shariah_platform_settings_v3'
+        ) {
+          this.handleStorageEvent();
+        }
+      });
+
+      // 3. Focus & visibility events for instant multi-device sync
       window.addEventListener('focus', () => this.checkForUpdates());
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
@@ -42,6 +73,51 @@ class SyncService {
         this.isOnline = false;
       });
     }
+  }
+
+  private handleStorageEvent() {
+    try {
+      const rawDocs = localStorage.getItem('shariah_platform_documents_v1');
+      const rawAwards = localStorage.getItem('shariah_platform_recognition_v1');
+      const rawStaff = localStorage.getItem('shariah_platform_staff_v5');
+      const rawSettings = localStorage.getItem('shariah_platform_settings_v3');
+
+      const data: Partial<ServerSyncData> = {};
+      if (rawDocs) data.documents = JSON.parse(rawDocs);
+      if (rawAwards) data.awards = JSON.parse(rawAwards);
+      if (rawStaff) data.staffList = JSON.parse(rawStaff);
+      if (rawSettings) data.schoolSettings = JSON.parse(rawSettings);
+
+      this.notifyListeners(data as ServerSyncData);
+    } catch (e) {
+      this.checkForUpdates();
+    }
+  }
+
+  public broadcastLocalUpdate(data: Partial<ServerSyncData>) {
+    const timestamp = Date.now();
+    this.lastModified = timestamp;
+    const fullPayload: ServerSyncData = {
+      staffList: data.staffList || [],
+      documents: data.documents || [],
+      awards: data.awards || [],
+      schoolSettings: data.schoolSettings || null,
+      circularTemplates: data.circularTemplates || [],
+      lastModified: timestamp,
+    };
+
+    // Broadcast immediately across all open tabs/windows
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage({
+          type: 'SYNC_DATA',
+          payload: fullPayload,
+        });
+      } catch (err) {}
+    }
+
+    // Trigger listeners in current window
+    this.notifyListeners(fullPayload);
   }
 
   public subscribe(listener: SyncListener): () => void {
@@ -61,7 +137,7 @@ class SyncService {
     });
   }
 
-  public startPolling(intervalMs: number = 8000) {
+  public startPolling(intervalMs: number = 2500) {
     if (this.pollIntervalId) return;
     this.pollIntervalId = setInterval(() => {
       this.checkForUpdates();
@@ -134,6 +210,7 @@ class SyncService {
   }
 
   public async pushFullSync(data: Partial<ServerSyncData>): Promise<ServerSyncData | null> {
+    this.broadcastLocalUpdate(data);
     try {
       const res = await fetch('/api/sync', {
         method: 'POST',
@@ -186,6 +263,7 @@ class SyncService {
   }
 
   public async pushAwards(awards: RecognitionAward[], staffList?: StaffMember[]): Promise<void> {
+    this.broadcastLocalUpdate({ awards, staffList });
     try {
       const res = await fetch('/api/data/awards', {
         method: 'POST',
@@ -202,6 +280,7 @@ class SyncService {
   }
 
   public async pushStaffList(staffList: StaffMember[]): Promise<void> {
+    this.broadcastLocalUpdate({ staffList });
     try {
       const res = await fetch('/api/data/staff', {
         method: 'POST',
@@ -218,6 +297,7 @@ class SyncService {
   }
 
   public async pushStaffMember(updatedStaff: StaffMember): Promise<void> {
+    this.broadcastLocalUpdate({ staffList: [updatedStaff] });
     try {
       const res = await fetch('/api/data/staff', {
         method: 'POST',

@@ -117,20 +117,20 @@ export default function App() {
       }
     });
 
-    // Start background multi-device polling sync
-    syncService.startPolling(7000);
+    // Start background multi-device polling sync (fast 2.5s interval)
+    syncService.startPolling(2500);
 
-    // Subscribe to live background updates from other devices
+    // Subscribe to live background updates from other devices & tabs
     const unsubscribe = syncService.subscribe((data: ServerSyncData) => {
-      if (data.staffList && data.staffList.length > 0) {
+      if (Array.isArray(data.staffList)) {
         setStaffList(data.staffList);
         try { localStorage.setItem('shariah_platform_staff_v5', JSON.stringify(data.staffList)); } catch (e) {}
       }
-      if (data.documents && data.documents.length > 0) {
+      if (Array.isArray(data.documents)) {
         setDocuments(data.documents);
         try { localStorage.setItem('shariah_platform_documents_v1', JSON.stringify(data.documents)); } catch (e) {}
       }
-      if (data.awards && data.awards.length > 0) {
+      if (Array.isArray(data.awards)) {
         setAwards(data.awards);
         try { localStorage.setItem('shariah_platform_recognition_v1', JSON.stringify(data.awards)); } catch (e) {}
       }
@@ -143,7 +143,7 @@ export default function App() {
       setAuthSession((prev) => {
         if (!prev || prev.role !== 'staff' || !prev.staffMember) return prev;
         const matching = data.staffList?.find(
-          s => s.id === prev.staffMember?.id || (s.nationalId && s.nationalId === prev.staffMember?.nationalId)
+          s => s.id === prev.staffMember?.id || (s.nationalId && prev.staffMember?.nationalId && s.nationalId === prev.staffMember.nationalId)
         );
         if (matching) {
           const updatedSession = { ...prev, staffMember: matching };
@@ -269,6 +269,8 @@ export default function App() {
     const updated = [newDoc, ...documents];
     setDocuments(updated);
     saveDocuments(updated);
+    syncService.pushDocument(newDoc);
+    syncService.broadcastLocalUpdate({ documents: updated });
   };
 
   const handleSaveSignature = (docId: string, signature: StaffSignature) => {
@@ -393,7 +395,9 @@ export default function App() {
             />
           ) : (
             (() => {
-              const currentStaffInList = staffList.find(s => s.id === authSession.staffMember?.id) || authSession.staffMember;
+              const currentStaffInList = staffList.find(
+                s => s.id === authSession.staffMember?.id || (s.nationalId && authSession.staffMember?.nationalId && s.nationalId === authSession.staffMember.nationalId)
+              ) || authSession.staffMember;
               return (
                 <StaffPortalView
                   currentStaff={currentStaffInList}
