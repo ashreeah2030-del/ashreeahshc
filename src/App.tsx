@@ -265,6 +265,20 @@ export default function App() {
     window.history.replaceState({}, '', window.location.pathname);
   };
 
+  // Handler for Registering Staff from Login View
+  const handleRegisterStaff = (registeredStaff: StaffMember) => {
+    const existingIndex = staffList.findIndex(s => s.id === registeredStaff.id || s.nationalId === registeredStaff.nationalId);
+    let updated: StaffMember[];
+    if (existingIndex !== -1) {
+      updated = [...staffList];
+      updated[existingIndex] = { ...updated[existingIndex], ...registeredStaff };
+    } else {
+      updated = [registeredStaff, ...staffList];
+    }
+    setStaffList(updated);
+    saveStaffMembers(updated);
+  };
+
   // Resolve active signing doc and staff
   const activeSignDoc = activeSignDocId ? documents.find(d => d.id === activeSignDocId) : null;
   const activeSignStaff = activeSignStaffId ? staffList.find(s => s.id === activeSignStaffId) : (authSession?.staffMember || null);
@@ -277,6 +291,7 @@ export default function App() {
         staffList={staffList}
         onLoginSuccess={handleLoginSuccess}
         onUpdateAdminPassword={handleUpdateAdminPassword}
+        onRegisterStaff={handleRegisterStaff}
       />
     );
   }

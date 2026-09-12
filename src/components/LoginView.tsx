@@ -11,7 +11,12 @@ import {
   GraduationCap, 
   Briefcase, 
   ArrowLeft,
-  ChevronDown
+  ChevronDown,
+  UserPlus,
+  Eye,
+  EyeOff,
+  IdCard,
+  Sparkles
 } from 'lucide-react';
 import { StaffMember, SchoolSettings, AuthSession } from '../types';
 import { MoeLogo } from './MoeLogo';
@@ -23,6 +28,7 @@ interface LoginViewProps {
   staffList: StaffMember[];
   onLoginSuccess: (session: AuthSession) => void;
   onUpdateAdminPassword?: (newPassword: string) => void;
+  onRegisterStaff?: (newStaff: StaffMember) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -30,8 +36,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
   staffList,
   onLoginSuccess,
   onUpdateAdminPassword,
+  onRegisterStaff,
 }) => {
-  const [activeTab, setActiveTab] = useState<'staff' | 'admin'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'admin' | 'register'>('staff');
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
 
   // Staff login state
@@ -39,10 +46,130 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [pin, setPin] = useState('');
   const [staffError, setStaffError] = useState('');
 
+  // Register account state
+  const [regNationalId, setRegNationalId] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState('');
+  const [matchedStaffNotice, setMatchedStaffNotice] = useState<StaffMember | null>(null);
+
   // Admin login state
   const [adminUsername, setAdminUsername] = useState('admin');
   const [adminPassword, setAdminPassword] = useState('admin');
   const [adminError, setAdminError] = useState('');
+
+  // Real-time lookup as user types National ID in registration
+  const handleRegNationalIdChange = (value: string) => {
+    const cleanDigits = value.replace(/[^0-9]/g, '').slice(0, 10);
+    setRegNationalId(cleanDigits);
+    setRegisterError('');
+
+    if (cleanDigits.length === 10) {
+      const found = staffList.find(s => s.nationalId === cleanDigits);
+      if (found) {
+        setMatchedStaffNotice(found);
+        if (!regName) {
+          setRegName(found.name);
+        }
+        if (!regPhone && found.phone) {
+          setRegPhone(found.phone);
+        }
+      } else {
+        setMatchedStaffNotice(null);
+      }
+    } else {
+      setMatchedStaffNotice(null);
+    }
+  };
+
+  // Handle New Account Registration Submit
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError('');
+    setRegisterSuccess('');
+
+    const cleanNatId = regNationalId.trim().replace(/[^0-9]/g, '');
+    const cleanPhone = regPhone.trim().replace(/[^0-9]/g, '');
+    const cleanName = regName.trim();
+    const pass = regPassword.trim();
+    const confirmPass = regConfirmPassword.trim();
+
+    // 1. National ID validation
+    if (cleanNatId.length !== 10) {
+      setRegisterError('يرجى إدخال رقم هوية وطنية (سجل مدني) صحيح مكون من 10 أرقام');
+      return;
+    }
+
+    // 2. Name validation
+    if (!cleanName) {
+      setRegisterError('يرجى كتابة الاسم الكامل (ثلاثي أو رباعي على الأقل)');
+      return;
+    }
+
+    // 3. Phone validation
+    if (cleanPhone.length < 10) {
+      setRegisterError('يرجى إدخال رقم جوال صحيح مكون من 10 أرقام يبدأ بـ 05 (مثال: 0501234567)');
+      return;
+    }
+
+    // 4. Password validation
+    if (pass.length < 4) {
+      setRegisterError('كلمة السر يجب ألا تقل عن 4 خانات');
+      return;
+    }
+
+    // 5. Confirm password validation
+    if (pass !== confirmPass) {
+      setRegisterError('كلمة السر وتأكيد كلمة السر غير متطابقين، يرجى إعادة التأكد');
+      return;
+    }
+
+    const existingStaff = staffList.find(s => s.nationalId === cleanNatId);
+    let memberToSave: StaffMember;
+
+    if (existingStaff) {
+      memberToSave = {
+        ...existingStaff,
+        name: cleanName || existingStaff.name,
+        phone: cleanPhone,
+        pin: pass,
+        active: true,
+      };
+    } else {
+      memberToSave = {
+        id: `staff-${Date.now()}`,
+        nationalId: cleanNatId,
+        name: cleanName,
+        phone: cleanPhone,
+        role: 'teacher',
+        roleTitle: 'معلم',
+        stage: 'all',
+        pin: pass,
+        points: 0,
+        active: true,
+      };
+    }
+
+    if (onRegisterStaff) {
+      onRegisterStaff(memberToSave);
+    }
+
+    setRegisterSuccess(`تم تسجيل وتفعيل حسابك بنجاح أ. ${memberToSave.name}! جاري نقلك لمساحتك الخاصة...`);
+
+    setTimeout(() => {
+      onLoginSuccess({
+        role: 'staff',
+        staffId: memberToSave.id,
+        staffMember: memberToSave,
+        loginAt: new Date().toISOString(),
+      });
+    }, 1100);
+  };
 
   // Handle Staff Login
   const handleStaffLogin = (e: React.FormEvent) => {
@@ -67,7 +194,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     });
 
     if (!foundStaff) {
-      setStaffError('لم يتم العثور على موظف مسجل بهذا السجل المدني أو رقم الجوال');
+      setStaffError('لم يتم العثور على موظف مسجل بهذا السجل المدني أو رقم الجوال. يمكنك النقر على "تسجيل حساب جديد" لإنشاء حسابك فوراً.');
       return;
     }
 
@@ -148,9 +275,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <span className="text-amber-300">•</span>
             <span className="text-amber-200 font-semibold">{schoolSettings.educationDepartment}</span>
           </div>
-          <div className="flex items-center gap-2 text-amber-200 font-mono text-[11px] bg-emerald-950/60 px-2.5 py-1 rounded-md border border-amber-400/30">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span>بوابة موحدة مشفرة ومحمية بالرمز السري</span>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              id="top-register-account-btn"
+              onClick={() => {
+                setActiveTab('register');
+                setRegisterError('');
+                setRegisterSuccess('');
+              }}
+              className="flex items-center gap-1.5 text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-1.5 rounded-full shadow-xs cursor-pointer transition-all hover:scale-105 active:scale-95"
+              title="تسجيل حساب جديد للكادر التعليمي والإداري"
+            >
+              <UserPlus className="w-4 h-4 text-slate-950" />
+              <span>تسجيل حساب جديد</span>
+            </button>
+            <div className="flex items-center gap-2 text-amber-200 font-mono text-[11px] bg-emerald-950/60 px-2.5 py-1 rounded-md border border-amber-400/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>بوابة موحدة مشفرة ومحمية بالرمز السري</span>
+            </div>
           </div>
         </div>
       </div>
@@ -232,42 +375,62 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           {/* Right/Form Panel (7 cols on desktop) */}
           <div className="lg:col-span-7 flex flex-col justify-between">
-            {/* Tab Switcher: Staff vs Admin */}
-            <div className="grid grid-cols-2 p-2 bg-slate-100 border-b border-slate-200 text-xs font-bold">
+            {/* Tab Switcher: Staff vs Register vs Admin */}
+            <div className="grid grid-cols-3 p-1.5 sm:p-2 bg-slate-100 border-b border-slate-200 text-xs font-bold gap-1 sm:gap-1.5">
               <button
                 type="button"
+                id="tab-staff-login"
                 onClick={() => {
                   setActiveTab('staff');
                   setStaffError('');
                 }}
-                className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2.5 sm:py-3 px-1 sm:px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'staff'
                     ? 'bg-white text-emerald-950 shadow-xs border border-slate-200 font-black'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <User className="w-4 h-4 text-emerald-700" />
-                <span>دخول المعلم / الإداري</span>
+                <User className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="truncate">دخول الموظف</span>
               </button>
 
               <button
                 type="button"
+                id="tab-register-account"
+                onClick={() => {
+                  setActiveTab('register');
+                  setRegisterError('');
+                  setRegisterSuccess('');
+                }}
+                className={`py-2.5 sm:py-3 px-1 sm:px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
+                  activeTab === 'register'
+                    ? 'bg-emerald-800 text-white shadow-xs font-black'
+                    : 'text-emerald-800 hover:text-emerald-950 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-300/80 font-black'
+                }`}
+              >
+                <UserPlus className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="truncate">تسجيل حساب جديد</span>
+              </button>
+
+              <button
+                type="button"
+                id="tab-admin-login"
                 onClick={() => {
                   setActiveTab('admin');
                   setAdminError('');
                 }}
-                className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2.5 sm:py-3 px-1 sm:px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'admin'
                     ? 'bg-white text-emerald-950 shadow-xs border border-slate-200 font-black'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Lock className="w-4 h-4 text-slate-700" />
-                <span>إدارة المجمع</span>
+                <Lock className="w-4 h-4 text-slate-700 shrink-0" />
+                <span className="truncate">إدارة المجمع</span>
               </button>
             </div>
 
-            <div className="p-6 sm:p-8 flex-1 flex flex-col justify-center">
+            <div className="p-5 sm:p-7 flex-1 flex flex-col justify-center">
               {activeTab === 'staff' ? (
                 /* Staff Login Form */
                 <form onSubmit={handleStaffLogin} className="space-y-4">
@@ -278,6 +441,32 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                       أدخل رقم سجلك المدني (أو جوالك) ورمز الدخول السري للاطلاع على مساحتك الخاصة والتوقيع بالعلم.
                     </p>
+                  </div>
+
+                  {/* Register Callout for new staff */}
+                  <div className="p-3 bg-emerald-50/90 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg shrink-0">
+                        <UserPlus className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block text-xs">ليس لديك حساب مسجل بعد؟</span>
+                        <span className="text-[11px] text-slate-500">سجل حسابك برقم الهوية والجوال وكلمة السر الآن</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      id="btn-switch-to-register"
+                      onClick={() => {
+                        setActiveTab('register');
+                        setRegisterError('');
+                        setRegisterSuccess('');
+                      }}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+                      <span>تسجيل حساب</span>
+                    </button>
                   </div>
 
                   {staffError && (
@@ -356,6 +545,208 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+                </form>
+              ) : activeTab === 'register' ? (
+                /* New Account Registration Form */
+                <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                  <div className="pb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">
+                        <UserPlus className="w-4 h-4" />
+                      </div>
+                      <h2 className="text-base font-black text-slate-900">
+                        تسجيل حساب جديد للكادر التعليمي والإداري
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      سجل بياناتك المعتمدة (الهوية، الجوال، وكلمة السر) لتفعيل حسابك الشخصي واستلام التعاميم والمساءلات والتوقيع بالعلم.
+                    </p>
+                  </div>
+
+                  {registerError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-800 text-xs">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{registerError}</span>
+                    </div>
+                  )}
+
+                  {registerSuccess && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-2 text-emerald-900 text-xs font-bold animate-in fade-in">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{registerSuccess}</span>
+                    </div>
+                  )}
+
+                  {matchedStaffNotice && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center gap-2 text-amber-900 text-xs font-medium">
+                      <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        مرحباً بك <strong>أ. {matchedStaffNotice.name}</strong>! تم التعرف على اسمك في سجلات المجمع. سيتم تعيين كلمة السر وتفعيل حسابك فوراً.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 1. National ID */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      رقم الهوية الوطنية (السجل المدني): <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="reg-national-id"
+                        type="text"
+                        maxLength={10}
+                        value={regNationalId}
+                        onChange={(e) => handleRegNationalIdChange(e.target.value)}
+                        placeholder="أدخل 10 أرقام (مثال: 1028471923)"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-mono font-bold text-slate-900"
+                        dir="ltr"
+                        required
+                      />
+                      <IdCard className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      10 أرقام مطابقة للهوية الوطنية أو الإقامة النظامية
+                    </span>
+                  </div>
+
+                  {/* 2. Full Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      الاسم الكامل (المعرب): <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="reg-full-name"
+                        type="text"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        placeholder="الاسم الثلاثي أو الرباعي كما في الهوية"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-bold text-slate-900"
+                        required
+                      />
+                      <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    </div>
+                  </div>
+
+                  {/* 3. Phone Number */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      رقم الجوال: <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="reg-phone"
+                        type="tel"
+                        maxLength={10}
+                        value={regPhone}
+                        onChange={(e) => setRegPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="0501234567"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-mono font-bold text-slate-900"
+                        dir="ltr"
+                        required
+                      />
+                      <Smartphone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      لإرسال إشعارات التعاميم وأوراق المساءلة والتواصل الرسمي
+                    </span>
+                  </div>
+
+                  {/* 4. Password & 5. Confirm Password Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        كلمة سر للدخول: <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="reg-password"
+                          type={showRegPassword ? 'text' : 'password'}
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="كلمة السر (4+ خانات)"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-mono font-bold text-slate-900 pr-3 pl-9"
+                          dir="ltr"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        تأكيد كلمة السر: <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="reg-confirm-password"
+                          type={showRegConfirmPassword ? 'text' : 'password'}
+                          value={regConfirmPassword}
+                          onChange={(e) => setRegConfirmPassword(e.target.value)}
+                          placeholder="أعد إدخال كلمة السر"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-mono font-bold text-slate-900 pr-3 pl-9"
+                          dir="ltr"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                          className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showRegConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Match Status */}
+                  {regPassword.length > 0 && regConfirmPassword.length > 0 && (
+                    <div>
+                      {regPassword === regConfirmPassword ? (
+                        <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>كلمتا السر متطابقتان تماماً</span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-bold text-rose-600 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                          <span>كلمة السر وتأكيد كلمة السر غير متطابقين</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    id="btn-submit-register"
+                    type="submit"
+                    className="w-full py-3 px-4 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-sm rounded-xl shadow-md shadow-emerald-950/20 transition-colors flex items-center justify-center gap-2 cursor-pointer mt-1"
+                  >
+                    <UserPlus className="w-4 h-4 text-amber-300" />
+                    <span>تسجيل وتفعيل الحساب الآن</span>
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('staff');
+                        setStaffError('');
+                      }}
+                      className="text-xs font-bold text-slate-600 hover:text-emerald-800 hover:underline cursor-pointer"
+                    >
+                      لديك حساب مسجل بالفعل؟ <strong>تسجيل الدخول</strong>
+                    </button>
                   </div>
                 </form>
               ) : (
