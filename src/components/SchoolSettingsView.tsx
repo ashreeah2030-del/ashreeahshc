@@ -68,7 +68,7 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
   };
 
   const handleResetPasswordDefault = () => {
-    if (confirm('هل ترغب في إعادة رمز الدخول إلى القيمة الافتراضية (admin)؟')) {
+    if (confirm('هل ترغب في إعادة ضبط رمز الدخول للإدارة؟')) {
       const updated = { ...formData, adminPassword: 'admin' };
       setFormData(updated);
       onSaveSettings(updated);
@@ -431,10 +431,10 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
                     رمز الدخول الجديد (PIN أو كلمة مرور):
                   </label>
                   <input
-                    type="text"
+                    type="password"
                     value={newPassInput}
                     onChange={(e) => setNewPassInput(e.target.value)}
-                    placeholder="مثال: 1448 أو 2030 أو رمز مخصص"
+                    placeholder="أدخل الرمز أو كلمة المرور الجديدة"
                     className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none text-xs sm:text-sm font-mono font-bold text-white dir-ltr text-right"
                   />
                 </div>
@@ -444,7 +444,7 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
                     تأكيد رمز الدخول الجديد:
                   </label>
                   <input
-                    type="text"
+                    type="password"
                     value={confirmPassInput}
                     onChange={(e) => setConfirmPassInput(e.target.value)}
                     placeholder="أعد كتابة الرمز للتأكيد"
@@ -453,39 +453,17 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
                 </div>
               </div>
 
-              {/* Quick Suggestion Pills & Action */}
+              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] text-slate-400">نماذج سريعة:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewPassInput('1448');
-                      setConfirmPassInput('1448');
-                    }}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg border border-slate-700 font-mono text-[11px] transition-colors cursor-pointer"
-                  >
-                    1448 (العام الحالي)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewPassInput('2030');
-                      setConfirmPassInput('2030');
-                    }}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg border border-slate-700 font-mono text-[11px] transition-colors cursor-pointer"
-                  >
-                    2030 (رؤية 2030)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetPasswordDefault}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 rounded-lg border border-slate-700 text-[11px] transition-colors cursor-pointer flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>إرجاع admin</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleResetPasswordDefault}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 text-xs transition-colors cursor-pointer flex items-center gap-1.5 w-fit"
+                  title="إعادة ضبط الرمز"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>إعادة ضبط الرمز</span>
+                </button>
 
                 <button
                   type="button"

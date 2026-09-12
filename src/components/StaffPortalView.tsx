@@ -29,7 +29,10 @@ import {
   Star,
   Crown,
   Flame,
-  GraduationCap
+  GraduationCap,
+  RefreshCw,
+  Smartphone,
+  Laptop
 } from 'lucide-react';
 import { formatDisplayPhone, generateRecognitionWhatsApp } from '../utils/whatsapp';
 import { CircularProgress } from './CircularProgress';
@@ -37,6 +40,7 @@ import { AcademicCalendarView } from './AcademicCalendarView';
 import { maskNationalId } from '../utils/formatters';
 import { CertificateModal } from './CertificateModal';
 import { getTeacherBadge, BADGE_TIERS_GUIDE } from '../utils/badges';
+import { syncService } from '../utils/syncService';
 
 interface StaffPortalViewProps {
   currentStaff: StaffMember;
@@ -66,9 +70,40 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
   // Certificate modal preview
   const [viewingAward, setViewingAward] = useState<RecognitionAward | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filter awards belonging to this staff member
-  const myAwards = awards.filter(a => a.staffId === currentStaff.id);
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncService.checkForUpdates();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
+
+  // Helper to check if a document is signed by this staff member (by ID or National ID)
+  const isDocSignedByMe = (doc: DispatchedDocument): boolean => {
+    if (doc.signatures[currentStaff.id]) return true;
+    return Object.values(doc.signatures).some(
+      s => s.nationalId && currentStaff.nationalId && s.nationalId === currentStaff.nationalId
+    );
+  };
+
+  const getMySignature = (doc: DispatchedDocument): StaffSignature | undefined => {
+    if (doc.signatures[currentStaff.id]) return doc.signatures[currentStaff.id];
+    return Object.values(doc.signatures).find(
+      s => s.nationalId && currentStaff.nationalId && s.nationalId === currentStaff.nationalId
+    );
+  };
+
+  // Filter awards belonging to this staff member (matches staffId OR nationalId for multi-device reliability)
+  const myAwards = awards.filter(a => 
+    a.staffId === currentStaff.id || 
+    (a.staffNationalId && currentStaff.nationalId && a.staffNationalId === currentStaff.nationalId)
+  );
+
   const myTotalPoints = typeof currentStaff.points === 'number'
     ? currentStaff.points
     : myAwards.reduce((sum, a) => sum + (a.points || 0), 0);
@@ -78,7 +113,11 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   // Inquiries strictly issued to this staff member
   const myInquiries = documents.filter(doc => 
     doc.type === 'inquiry' && 
-    (doc.inquiryData?.staffId === currentStaff.id || doc.targetStaffIds.includes(currentStaff.id))
+    (
+      doc.inquiryData?.staffId === currentStaff.id || 
+      (doc.inquiryData?.staffNationalId && currentStaff.nationalId && doc.inquiryData.staffNationalId === currentStaff.nationalId) ||
+      doc.targetStaffIds.includes(currentStaff.id)
+    )
   );
 
   // Circulars targeted to this staff member (all school, teachers, specific stage, or specific id)
@@ -94,11 +133,11 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   });
 
   // Signed documents history
-  const mySignedHistory = documents.filter(doc => !!doc.signatures[currentStaff.id]);
+  const mySignedHistory = documents.filter(doc => isDocSignedByMe(doc));
 
   // Pending counts
-  const pendingInquiriesCount = myInquiries.filter(doc => !doc.signatures[currentStaff.id]).length;
-  const pendingCircularsCount = myCirculars.filter(doc => !doc.signatures[currentStaff.id]).length;
+  const pendingInquiriesCount = myInquiries.filter(doc => !isDocSignedByMe(doc)).length;
+  const pendingCircularsCount = myCirculars.filter(doc => !isDocSignedByMe(doc)).length;
   const myTotalAssigned = myInquiries.length + myCirculars.length;
   const myCompletionRate = myTotalAssigned > 0 ? Math.round((mySignedHistory.length / myTotalAssigned) * 100) : 100;
 
@@ -174,6 +213,17 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
               <button
                 type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="px-3 py-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 text-xs font-bold rounded-xl border border-emerald-600/60 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                title="تحديث البيانات فورياً واسترجاع آخر الشهادات والمساءلات الصادرة لحسابك"
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-300 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'جاري التحديث...' : 'تحديث فوري'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsChangingPin(!isChangingPin)}
                 className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
@@ -237,6 +287,26 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           </div>
         </div>
 
+        {/* Multi-Device Cloud Sync Notice */}
+        <div className="bg-emerald-50/90 border-b border-emerald-200/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-900">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-bold">المزامنة السحابية المركزية مفعلة:</span>
+            <span className="text-emerald-800 text-[11px]">
+              كافة شهادات الشكر، ونقاط التميز، وأوراق المساءلة الإدارية الصادرة لك تظهر فوراً من أي جهاز تدخل منه بحسابك.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-emerald-700 font-semibold">
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>جوال</span>
+            <span>•</span>
+            <Laptop className="w-3.5 h-3.5" />
+            <span>حاسب</span>
+            <span>•</span>
+            <span className="font-mono bg-emerald-100 px-2 py-0.5 rounded text-emerald-950 font-bold">هوية: {maskNationalId(currentStaff.nationalId)}</span>
+          </div>
+        </div>
+
         {/* Change PIN Form Popdown */}
         {isChangingPin && (
           <div className="p-4 bg-amber-50 border-b border-amber-200 border-r-4 border-r-amber-500">
@@ -260,7 +330,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   maxLength={10}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="أدخل 4 أرقام جديدة"
+                  placeholder="أدخل كلمة المرور الجديدة"
                   className="px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none w-full"
                   dir="ltr"
                 />
@@ -409,8 +479,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {myInquiries.map(doc => {
-                const isSigned = !!doc.signatures[currentStaff.id];
-                const sig = doc.signatures[currentStaff.id];
+                const isSigned = isDocSignedByMe(doc);
+                const sig = getMySignature(doc);
                 const inq = doc.inquiryData;
 
                 return (
@@ -550,8 +620,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {myCirculars.map(doc => {
-                const isSigned = !!doc.signatures[currentStaff.id];
-                const sig = doc.signatures[currentStaff.id];
+                const isSigned = isDocSignedByMe(doc);
+                const sig = getMySignature(doc);
 
                 return (
                   <div
@@ -658,7 +728,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {mySignedHistory.map(doc => {
-                      const sig = doc.signatures[currentStaff.id];
+                      const sig = getMySignature(doc);
                       return (
                         <tr key={doc.id} className="hover:bg-slate-50/70">
                           <td className="p-3">

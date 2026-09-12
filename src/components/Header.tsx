@@ -114,6 +114,12 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
+            {/* Cloud Sync Status Badge */}
+            <div className="flex items-center gap-1.5 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/30 text-emerald-200 text-xs" title="المزامنة السحابية المركزية مفعلة لجميع الأجهزة">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-[11px] font-bold">تزامن مركزي</span>
+            </div>
+
             <div className="flex items-center gap-1.5 bg-emerald-950/60 px-2.5 sm:px-3 py-1 rounded-lg border border-amber-400/30 text-amber-200">
               <Smartphone className="w-3.5 h-3.5 text-amber-300" />
               <span className="text-[11px] text-emerald-200 font-medium">جوال الواتساب:</span>

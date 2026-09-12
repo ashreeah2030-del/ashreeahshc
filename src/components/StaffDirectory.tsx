@@ -1013,17 +1013,14 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                     <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
                     <span>رمز الدخول السري للموظف (PIN للمنظومة)</span>
                   </label>
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    افتراضياً: آخر 4 أرقام من السجل المدني
-                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
-                    type="text"
-                    maxLength={10}
+                    type="password"
+                    maxLength={20}
                     value={formData.pin}
-                    onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/[^0-9a-zA-Z]/g, '') })}
-                    placeholder={formData.nationalId ? formData.nationalId.slice(-4) : "مثال: 1923"}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                    placeholder="أدخل رمز الدخول السري"
                     className="w-full px-3 py-2 font-mono font-bold bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm dir-ltr text-right"
                   />
                   {formData.nationalId && (
@@ -1031,10 +1028,10 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                       type="button"
                       onClick={() => setFormData({ ...formData, pin: formData.nationalId.slice(-4) })}
                       className="shrink-0 px-2.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-                      title="إعادة تعيين الرمز السري إلى آخر 4 أرقام من السجل المدني"
+                      title="إعادة تعيين الرمز السري"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      <span>استعادة الافتراضي</span>
+                      <span>إعادة تعيين</span>
                     </button>
                   )}
                 </div>

@@ -404,7 +404,7 @@ export const NoorImportModal: React.FC<NoorImportModalProps> = ({
                       ✓ يضبط صيغة أرقام الجوالات السعودية
                     </span>
                     <span className="text-xs bg-white text-slate-700 px-3 py-1 rounded-lg font-semibold border border-slate-200 shadow-xs">
-                      ✓ يعين الرمز السري (PIN) من آخر 4 أرقام للهوية
+                      ✓ ينشئ حسابات دخول آمنة للموظفين تلقائياً
                     </span>
                   </div>
 

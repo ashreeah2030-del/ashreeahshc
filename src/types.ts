@@ -25,6 +25,8 @@ export interface StaffMember {
   pin?: string; // 4-digit secret PIN for login (defaults to last 4 digits of nationalId)
   points?: number; // Total motivation points earned
   active: boolean;
+  registered?: boolean; // True if staff has completed self-registration / set password
+  registeredAt?: string;
 }
 
 export type UserRole = 'admin' | 'staff';

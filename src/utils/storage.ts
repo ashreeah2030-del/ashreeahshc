@@ -1,6 +1,7 @@
 import { StaffMember, DispatchedDocument, SchoolSettings, StaffSignature, AuthSession, CircularTemplate, RecognitionAward } from '../types';
 import { INITIAL_STAFF_MEMBERS, INITIAL_DISPATCHED_DOCUMENTS, DEFAULT_SCHOOL_SETTINGS } from '../data/sampleStaff';
 import { INITIAL_CIRCULAR_TEMPLATES } from '../data/sampleTemplates';
+import { syncService } from './syncService';
 
 const STORAGE_KEYS = {
   STAFF: 'shariah_platform_staff_v5',
@@ -39,6 +40,7 @@ export function loadStaffMembers(): StaffMember[] {
 export function saveStaffMembers(staff: StaffMember[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff));
+    syncService.pushStaffList(staff);
   } catch (e) {
     console.error('Error saving staff to localStorage:', e);
   }
@@ -223,6 +225,7 @@ export function loadDocuments(): DispatchedDocument[] {
 export function saveDocuments(docs: DispatchedDocument[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
+    syncService.pushFullSync({ documents: docs });
   } catch (e) {
     console.error('Error saving documents to localStorage:', e);
   }
@@ -286,6 +289,7 @@ export function loadSchoolSettings(): SchoolSettings {
 export function saveSchoolSettings(settings: SchoolSettings): void {
   try {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    syncService.pushFullSync({ schoolSettings: settings });
   } catch (e) {
     console.error('Error saving settings to localStorage:', e);
   }
@@ -306,6 +310,7 @@ export function saveStaffSignature(docId: string, signature: StaffSignature): Di
     return doc;
   });
   saveDocuments(updatedDocs);
+  syncService.pushSignature(docId, signature);
   return updatedDocs;
 }
 
@@ -400,6 +405,7 @@ export function loadRecognitionAwards(): RecognitionAward[] {
 export function saveRecognitionAwards(awards: RecognitionAward[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.RECOGNITION, JSON.stringify(awards));
+    syncService.pushAwards(awards);
   } catch (e) {
     console.error('Error saving recognition awards to localStorage:', e);
   }

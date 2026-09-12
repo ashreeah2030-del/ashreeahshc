@@ -27,6 +27,7 @@ import {
   updateRecognitionAward,
   deleteRecognitionAward
 } from './utils/storage';
+import { syncService, ServerSyncData } from './utils/syncService';
 import { Header } from './components/Header';
 import { StaffDirectory } from './components/StaffDirectory';
 import { CircularsManager } from './components/CircularsManager';
@@ -77,7 +78,7 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Initial Data Load
+  // Initial Data Load & Multi-Device Cloud Sync
   useEffect(() => {
     const loadedStaff = loadStaffMembers();
     const loadedDocs = loadDocuments();
@@ -89,6 +90,70 @@ export default function App() {
     setSchoolSettings(loadedSettings);
     setAwards(loadedAwards);
 
+    // Initial server fetch & seeding across devices
+    syncService.fetchInitialData({
+      staffList: loadedStaff,
+      documents: loadedDocs,
+      schoolSettings: loadedSettings,
+      awards: loadedAwards,
+    }).then((serverData) => {
+      if (serverData) {
+        if (serverData.staffList && serverData.staffList.length > 0) {
+          setStaffList(serverData.staffList);
+          try { localStorage.setItem('shariah_platform_staff_v5', JSON.stringify(serverData.staffList)); } catch (e) {}
+        }
+        if (serverData.documents && serverData.documents.length > 0) {
+          setDocuments(serverData.documents);
+          try { localStorage.setItem('shariah_platform_documents_v1', JSON.stringify(serverData.documents)); } catch (e) {}
+        }
+        if (serverData.awards && serverData.awards.length > 0) {
+          setAwards(serverData.awards);
+          try { localStorage.setItem('shariah_platform_recognition_v1', JSON.stringify(serverData.awards)); } catch (e) {}
+        }
+        if (serverData.schoolSettings) {
+          setSchoolSettings(serverData.schoolSettings);
+          try { localStorage.setItem('shariah_platform_settings_v3', JSON.stringify(serverData.schoolSettings)); } catch (e) {}
+        }
+      }
+    });
+
+    // Start background multi-device polling sync
+    syncService.startPolling(7000);
+
+    // Subscribe to live background updates from other devices
+    const unsubscribe = syncService.subscribe((data: ServerSyncData) => {
+      if (data.staffList && data.staffList.length > 0) {
+        setStaffList(data.staffList);
+        try { localStorage.setItem('shariah_platform_staff_v5', JSON.stringify(data.staffList)); } catch (e) {}
+      }
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents);
+        try { localStorage.setItem('shariah_platform_documents_v1', JSON.stringify(data.documents)); } catch (e) {}
+      }
+      if (data.awards && data.awards.length > 0) {
+        setAwards(data.awards);
+        try { localStorage.setItem('shariah_platform_recognition_v1', JSON.stringify(data.awards)); } catch (e) {}
+      }
+      if (data.schoolSettings) {
+        setSchoolSettings(data.schoolSettings);
+        try { localStorage.setItem('shariah_platform_settings_v3', JSON.stringify(data.schoolSettings)); } catch (e) {}
+      }
+
+      // If user is currently logged in as a staff member, update their session so certificates and points match live
+      setAuthSession((prev) => {
+        if (!prev || prev.role !== 'staff' || !prev.staffMember) return prev;
+        const matching = data.staffList?.find(
+          s => s.id === prev.staffMember?.id || (s.nationalId && s.nationalId === prev.staffMember?.nationalId)
+        );
+        if (matching) {
+          const updatedSession = { ...prev, staffMember: matching };
+          saveAuthSession(updatedSession);
+          return updatedSession;
+        }
+        return prev;
+      });
+    });
+
     // Check URL parameters for direct WhatsApp link
     const params = new URLSearchParams(window.location.search);
     const docIdParam = params.get('docId');
@@ -98,6 +163,11 @@ export default function App() {
       setActiveSignDocId(docIdParam);
       setActiveSignStaffId(staffIdParam);
     }
+
+    return () => {
+      unsubscribe();
+      syncService.stopPolling();
+    };
   }, []);
 
   // Authentication Handlers

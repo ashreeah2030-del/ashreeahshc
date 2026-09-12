@@ -47,7 +47,8 @@ export const DocumentSignView: React.FC<DocumentSignViewProps> = ({
 
   const isCircular = doc.type === 'circular';
   const isInquiry = doc.type === 'inquiry';
-  const existingSignature = doc.signatures[staff.id];
+  const existingSignature = doc.signatures[staff.id] || 
+    (Object.values(doc.signatures || {}) as StaffSignature[]).find(s => s.nationalId && staff.nationalId && s.nationalId === staff.nationalId);
 
   // If already signed previously
   useEffect(() => {
