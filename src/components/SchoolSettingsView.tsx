@@ -12,11 +12,16 @@ import {
   KeyRound,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  PenTool,
+  Upload,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { SchoolSettings } from '../types';
 import { formatSaudiPhone } from '../utils/whatsapp';
 import { MoeLogo } from './MoeLogo';
+import { PrincipalSignature } from './PrincipalSignature';
 
 interface SchoolSettingsViewProps {
   settings: SchoolSettings;
@@ -70,6 +75,55 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
       setPassSuccess(true);
       setTimeout(() => setPassSuccess(false), 3000);
     }
+  };
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        // Auto color-keying to remove white / light backgrounds
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const luminance = (r * 0.299 + g * 0.587 + b * 0.114);
+          if (luminance > 220) {
+            data[i + 3] = 0; // Transparent
+          } else if (luminance > 195) {
+            const factor = (220 - luminance) / 25;
+            data[i + 3] = Math.round(data[i + 3] * factor);
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        const transparentDataUrl = canvas.toDataURL('image/png');
+        const updated = { ...formData, principalSignatureUrl: transparentDataUrl };
+        setFormData(updated);
+        onSaveSettings(updated);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetOfficialSignature = () => {
+    const updated = { ...formData, principalSignatureUrl: '/principal_signature.svg' };
+    setFormData(updated);
+    onSaveSettings(updated);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -175,6 +229,79 @@ export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({
                 onChange={(e) => setFormData({ ...formData, vicePrincipalName: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none font-semibold text-slate-900"
               />
+            </div>
+          </div>
+
+          {/* Official Principal Signature Card (Transparent background) */}
+          <div className="bg-gradient-to-br from-slate-50 to-emerald-50/40 p-4 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-100/80 text-emerald-800 rounded-xl">
+                  <PenTool className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    توقيع مدير المجمع التعليمي المعتمد (بدون خلفية)
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    التوقيع الرسمي لمدير المجمع مفرّغ بدون خلفية للاستخدام الإداري، يظهر تلقائياً في كشوفات التوثيق وشهادات الشكر
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300/80 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-emerald-700" />
+                  بدون خلفية (شفاف 100%)
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-white p-4 rounded-xl border border-slate-200">
+              {/* Signature Preview against a subtle checkerboard pattern representing transparency */}
+              <div className="sm:col-span-6 flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] bg-[size:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0]">
+                <PrincipalSignature 
+                  customUrl={formData.principalSignatureUrl} 
+                  className="w-48 h-20 object-contain drop-shadow-xs" 
+                />
+                <span className="text-[10px] text-slate-500 font-semibold mt-1">
+                  المعاينة الحية: التوقيع شفاف تماماً فوق أي مستند أو خلفية
+                </span>
+              </div>
+
+              {/* Signature Control Actions */}
+              <div className="sm:col-span-6 space-y-2.5 text-xs">
+                <div className="text-slate-700">
+                  <p className="font-bold text-slate-800">المدير المعتمد:</p>
+                  <p className="text-emerald-950 font-black text-sm">{formData.principalName}</p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold cursor-pointer transition-all shadow-2xs">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>تغيير / رفع توقيع مفرغ</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleResetOfficialSignature}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-all border border-slate-200 cursor-pointer"
+                    title="استعادة التوقيع الرسمي الافتراضي"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>استعادة الرسمي</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  ⚡ نظام إزالة الخلفية التلقائي: عند رفع أي صورة توقيع، يتم تفريغ خلفيتها البيضاء وجعلها شفافة بالكامل تلقائياً.
+                </p>
+              </div>
             </div>
           </div>
 

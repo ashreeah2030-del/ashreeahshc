@@ -1,5 +1,6 @@
 import { StaffMember, DispatchedDocument, StaffSignature, SchoolSettings, RecognitionAward } from '../types';
 import { maskNationalId } from './formatters';
+import { getTeacherBadge } from './badges';
 
 /**
  * Clean and standardize Saudi mobile numbers to international format (966XXXXXXXXX)
@@ -168,6 +169,11 @@ export function generateRecognitionWhatsApp(
   schoolSettings: SchoolSettings
 ): { url: string; text: string; cleanPhone: string } {
   const cleanPhone = formatSaudiPhone(staff.phone);
+  const badge = getTeacherBadge(staff.points || 0);
+
+  const badgeLine = badge.type !== 'none'
+    ? `🎖️ *شارة التميز المحققة:* ${badge.icon} ${badge.name} (${staff.points || 0} نقطة تراكمية)`
+    : `🌱 *مسار التميز:* رصيدك الحالي (${staff.points || 0}) نقطة - متبقي ${badge.remainingToNext} نقطة للشارة المثالية`;
   
   const text = `🎉 *شهادة شكر وتقدير وتحفيز متميز* 🌟
 السلام عليكم ورحمة الله وبركاته
@@ -179,6 +185,7 @@ ${staff.roleTitle} - ${schoolSettings.schoolName}
 🏅 *المناسبة:* ${award.title}
 ✨ *السبب:* ${award.categoryTitle}
 ⭐ *النقاط الممنوحة:* +${award.points} نقطة تميز
+${badgeLine}
 🔢 *رقم الشهادة المعتمد:* ${award.certificateNumber}
 📅 *التاريخ:* ${award.hijriDate} (${award.date})
 

@@ -78,8 +78,18 @@ export function detectStaffRole(roleStr: string = ''): { role: StaffRole; roleTi
   if (lower.includes('مدير') || lower.includes('قائد')) {
     return { role: 'principal', roleTitle: text || 'مدير مدرسة' };
   }
+  if (lower.includes('وكيل') && (lower.includes('طلاب') || lower.includes('طلبة') || lower.includes('شؤون طلاب'))) {
+    return { role: 'student_affairs_vice_principal', roleTitle: text || 'وكيل شؤون الطلاب' };
+  }
   if (lower.includes('وكيل')) {
     return { role: 'vice_principal', roleTitle: text || 'وكيل مدرسة' };
+  }
+  if (
+    lower.includes('محضر حاسب') || 
+    lower.includes('محضر الحاسب') || 
+    (lower.includes('حاسب') && (lower.includes('محضر') || lower.includes('معمل') || lower.includes('مختبر')))
+  ) {
+    return { role: 'computer_lab_prep', roleTitle: text || 'محضر الحاسب الآلي' };
   }
   if (lower.includes('مرشد') || lower.includes('موجه طلابي') || lower.includes('توجيه')) {
     return { role: 'counselor', roleTitle: text || 'موجه طلابي' };

@@ -20,18 +20,24 @@ import {
   CheckCircle2,
   Building2,
   Sparkles,
-  Eye,
-  EyeOff,
-  ShieldCheck
+  ShieldCheck,
+  Laptop,
+  Users,
+  CheckSquare,
+  Square,
+  Send
 } from 'lucide-react';
-import { StaffMember, SchoolStage, StaffRole } from '../types';
+import { StaffMember, SchoolStage, StaffRole, SchoolSettings } from '../types';
 import { formatSaudiPhone, formatDisplayPhone } from '../utils/whatsapp';
 import { NoorImportModal } from './NoorImportModal';
+import { BulkMessageModal } from './BulkMessageModal';
 import { downloadNoorExcelTemplate } from '../utils/noorParser';
 import { maskNationalId } from '../utils/formatters';
+import { getTeacherBadge } from '../utils/badges';
 
 interface StaffDirectoryProps {
   staffList: StaffMember[];
+  schoolSettings?: SchoolSettings;
   onAddStaff: (staff: Omit<StaffMember, 'id'>) => void;
   onUpdateStaff: (staff: StaffMember) => void;
   onDeleteStaff: (staffId: string) => void;
@@ -41,6 +47,7 @@ interface StaffDirectoryProps {
 
 export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   staffList,
+  schoolSettings,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -48,9 +55,13 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   onClearAllStaff,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'teacher' | 'admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'teacher' | 'admin' | 'student_affairs_vice_principal' | 'computer_lab_prep'>('all');
   const [stageFilter, setStageFilter] = useState<SchoolStage | 'all'>('all');
   
+  // Selection state for multi-messaging and actions
+  const [selectedStaffIds, setSelectedStaffIds] = useState<Set<string>>(new Set());
+  const [isBulkMessageModalOpen, setIsBulkMessageModalOpen] = useState(false);
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -61,19 +72,6 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
   const [isNoorModalOpen, setIsNoorModalOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importNotice, setImportNotice] = useState<string | null>(null);
-  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
-
-  const toggleRevealId = (staffId: string) => {
-    setRevealedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(staffId)) {
-        next.delete(staffId);
-      } else {
-        next.add(staffId);
-      }
-      return next;
-    });
-  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -103,6 +101,8 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
       const matchesRole = 
         roleFilter === 'all' ? true :
         roleFilter === 'teacher' ? staff.role === 'teacher' :
+        roleFilter === 'student_affairs_vice_principal' ? staff.role === 'student_affairs_vice_principal' :
+        roleFilter === 'computer_lab_prep' ? staff.role === 'computer_lab_prep' :
         staff.role !== 'teacher';
 
       const matchesStage = 
@@ -298,6 +298,40 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
+  // Multi-Selection Handlers
+  const toggleSelectStaff = (id: string) => {
+    setSelectedStaffIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    if (filteredStaff.length > 0 && filteredStaff.every(s => selectedStaffIds.has(s.id))) {
+      setSelectedStaffIds(prev => {
+        const next = new Set(prev);
+        filteredStaff.forEach(s => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelectedStaffIds(prev => {
+        const next = new Set(prev);
+        filteredStaff.forEach(s => next.add(s.id));
+        return next;
+      });
+    }
+  };
+
+  const handleSelectAllTeachers = () => {
+    setSelectedStaffIds(new Set(staffList.filter(s => s.role === 'teacher').map(s => s.id)));
+  };
+
+  const handleSelectAllStaff = () => {
+    setSelectedStaffIds(new Set(staffList.map(s => s.id)));
+  };
+
   return (
     <div className="space-y-6">
       {/* Feedback Toast / Notice */}
@@ -386,6 +420,21 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
+              id="bulk-message-btn"
+              onClick={() => setIsBulkMessageModalOpen(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer border border-emerald-500 hover:shadow-md"
+              title="إرسال رسائل واتساب للجميع أو للمحددين"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>إرسال رسائل للكل / المحددين</span>
+              {selectedStaffIds.size > 0 && (
+                <span className="bg-white text-emerald-800 text-[11px] font-black px-1.5 py-0.2 rounded-full">
+                  {selectedStaffIds.size}
+                </span>
+              )}
+            </button>
+
+            <button
               id="bulk-import-noor-btn"
               onClick={() => setIsNoorModalOpen(true)}
               className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer border border-emerald-700 hover:shadow-md"
@@ -432,7 +481,7 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-slate-100 text-xs">
           <span className="font-semibold text-slate-500">تصفية حسب الدور:</span>
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-lg">
             <button
               onClick={() => setRoleFilter('all')}
               className={`px-3 py-1 rounded-md font-medium transition-all ${
@@ -457,6 +506,26 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
             >
               الهيئة الإدارية ({staffList.filter(s => s.role !== 'teacher').length})
             </button>
+            {staffList.some(s => s.role === 'student_affairs_vice_principal') && (
+              <button
+                onClick={() => setRoleFilter('student_affairs_vice_principal')}
+                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                  roleFilter === 'student_affairs_vice_principal' ? 'bg-white text-purple-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                وكيل شؤون الطلاب ({staffList.filter(s => s.role === 'student_affairs_vice_principal').length})
+              </button>
+            )}
+            {staffList.some(s => s.role === 'computer_lab_prep') && (
+              <button
+                onClick={() => setRoleFilter('computer_lab_prep')}
+                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                  roleFilter === 'computer_lab_prep' ? 'bg-white text-sky-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                محضر الحاسب ({staffList.filter(s => s.role === 'computer_lab_prep').length})
+              </button>
+            )}
           </div>
 
           <span className="font-semibold text-slate-500 mr-2">المرحلة:</span>
@@ -479,6 +548,57 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Multi-Select Floating Action Bar */}
+      {selectedStaffIds.size > 0 && (
+        <div className="bg-emerald-50 border border-emerald-300 text-emerald-950 p-3.5 sm:p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              {selectedStaffIds.size}
+            </div>
+            <div>
+              <span className="font-bold text-xs sm:text-sm text-emerald-900 block">
+                تم تحديد {selectedStaffIds.size} من منسوبي المجمع
+              </span>
+              <span className="text-[11px] text-emerald-700">
+                يمكنك الآن إرسال رسائل واتساب جماعية ومخصصة للمحددين بنقرة واحدة
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id="send-selected-message-btn"
+              onClick={() => setIsBulkMessageModalOpen(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition-colors cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              <span>إرسال رسالة واتساب للمحددين ({selectedStaffIds.size})</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSelectAllTeachers}
+              className="bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              تحديد جميع المعلمين ({staffList.filter(s => s.role === 'teacher').length})
+            </button>
+            <button
+              type="button"
+              onClick={handleSelectAllStaff}
+              className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              تحديد الكل ({staffList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStaffIds(new Set())}
+              className="text-rose-700 hover:bg-rose-100 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              إلغاء التحديد
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Staff Table / Cards / Empty State */}
       {staffList.length === 0 ? (
@@ -525,7 +645,16 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
             <table className="w-full text-right border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
-                  <th className="py-3.5 px-4">#</th>
+                  <th className="py-3.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={filteredStaff.length > 0 && filteredStaff.every(s => selectedStaffIds.has(s.id))}
+                      onChange={toggleSelectAllFiltered}
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      title="تحديد أو إلغاء تحديد كل المعروضين"
+                    />
+                  </th>
+                  <th className="py-3.5 px-3">#</th>
                   <th className="py-3.5 px-4">اسم الموظف الرباعي</th>
                   <th className="py-3.5 px-4">
                     <div className="flex items-center gap-1.5">
@@ -538,13 +667,14 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                   <th className="py-3.5 px-4">رقم الجوال</th>
                   <th className="py-3.5 px-4">المسمى الوظيفي / التخصص</th>
                   <th className="py-3.5 px-4">المرحلة</th>
+                  <th className="py-3.5 px-4">نقاط التميز والشارة</th>
                   <th className="py-3.5 px-4 text-center">التواصل والعمليات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
                       <UserCheck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                       <p className="font-semibold text-slate-600">لم يتم العثور على موظفين يطابقون البحث</p>
                       <p className="text-xs text-slate-400 mt-1">تأكد من كتابة الاسم أو رقم السجل المدني بشكل صحيح</p>
@@ -553,9 +683,25 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                 ) : (
                   filteredStaff.map((staff, idx) => {
                     const isTeacher = staff.role === 'teacher';
+                    const isSelected = selectedStaffIds.has(staff.id);
+                    const badge = getTeacherBadge(staff.points || 0);
                     return (
-                      <tr key={staff.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-slate-400 text-xs">
+                      <tr 
+                        key={staff.id} 
+                        className={`transition-colors ${
+                          isSelected ? 'bg-emerald-50/60' : 'hover:bg-slate-50/70'
+                        }`}
+                      >
+                        <td className="py-3.5 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectStaff(staff.id)}
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                            title={`تحديد ${staff.name}`}
+                          />
+                        </td>
+                        <td className="py-3.5 px-3 font-mono text-slate-400 text-xs">
                           {idx + 1}
                         </td>
 
@@ -565,9 +711,21 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                               isTeacher 
                                 ? 'bg-emerald-100 text-emerald-800' 
+                                : staff.role === 'student_affairs_vice_principal'
+                                ? 'bg-purple-100 text-purple-800'
+                                : staff.role === 'computer_lab_prep'
+                                ? 'bg-sky-100 text-sky-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {isTeacher ? <GraduationCap className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                              {isTeacher ? (
+                                <GraduationCap className="w-4 h-4" />
+                              ) : staff.role === 'computer_lab_prep' ? (
+                                <Laptop className="w-4 h-4" />
+                              ) : staff.role === 'student_affairs_vice_principal' ? (
+                                <Users className="w-4 h-4" />
+                              ) : (
+                                <Briefcase className="w-4 h-4" />
+                              )}
                             </div>
                             <div>
                               <span className="font-bold text-slate-900 block">{staff.name}</span>
@@ -578,29 +736,14 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                           </div>
                         </td>
 
-                        {/* National ID (Masked except last 4 digits) */}
+                        {/* National ID (Masked) */}
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span 
-                              className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/70 shadow-2xs" 
-                              dir="ltr"
-                            >
-                              {revealedIds.has(staff.id) ? staff.nationalId : maskNationalId(staff.nationalId)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleRevealId(staff.id)}
-                              className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-                              title={revealedIds.has(staff.id) ? "إخفاء رقم الهوية (حماية الخصوصية)" : "إظهار كامل رقم الهوية"}
-                              aria-label="تبديل إظهار رقم الهوية"
-                            >
-                              {revealedIds.has(staff.id) ? (
-                                <EyeOff className="w-3.5 h-3.5 text-amber-700" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
+                          <span 
+                            className="font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md tracking-wider border border-slate-200/70 shadow-2xs inline-block" 
+                            dir="ltr"
+                          >
+                            {maskNationalId(staff.nationalId)}
+                          </span>
                         </td>
 
                         {/* Mobile */}
@@ -620,6 +763,10 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
                             isTeacher 
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : staff.role === 'student_affairs_vice_principal'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200 font-bold'
+                              : staff.role === 'computer_lab_prep'
+                              ? 'bg-sky-50 text-sky-700 border border-sky-200 font-bold'
                               : 'bg-blue-50 text-blue-700 border border-blue-200'
                           }`}>
                             {staff.roleTitle}
@@ -638,6 +785,25 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                              staff.stage === 'intermediate' ? 'المتوسطة' :
                              staff.stage === 'secondary' ? 'الثانوية' : 'عام / المجمع'}
                           </span>
+                        </td>
+
+                        {/* Points & Badge */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-black text-xs bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md">
+                              {staff.points || 0} نقطة
+                            </span>
+                            {badge.type !== 'none' ? (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1 font-bold ${badge.pillClass}`}>
+                                <span>{badge.icon}</span>
+                                <span>{badge.name}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                متبقي {badge.remainingToNext} للشارة المثالية
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Actions */}
@@ -763,20 +929,25 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
                       const newRole = e.target.value as StaffRole;
                       let defaultTitle = formData.roleTitle;
                       if (newRole === 'teacher') defaultTitle = 'معلم';
-                      else if (newRole === 'vice_principal') defaultTitle = 'وكيل المجمع';
+                      else if (newRole === 'vice_principal') defaultTitle = 'وكيل شؤون المعلمين والموظفين';
+                      else if (newRole === 'student_affairs_vice_principal') defaultTitle = 'وكيل شؤون الطلاب';
+                      else if (newRole === 'computer_lab_prep') defaultTitle = 'محضر الحاسب الآلي';
                       else if (newRole === 'counselor') defaultTitle = 'موجه طلابي';
                       else if (newRole === 'activity_leader') defaultTitle = 'رائد النشاط';
-                      else if (newRole === 'lab_prep') defaultTitle = 'محضر مختبر';
+                      else if (newRole === 'lab_prep') defaultTitle = 'محضر مختبر علوم';
                       else if (newRole === 'admin') defaultTitle = 'إداري شؤون الموظفين';
+                      else if (newRole === 'principal') defaultTitle = 'مدير المجمع';
                       setFormData({ ...formData, role: newRole, roleTitle: defaultTitle });
                     }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none"
                   >
                     <option value="teacher">معلم</option>
-                    <option value="vice_principal">وكيل شؤون معلمين / وكيل مرحلة</option>
+                    <option value="vice_principal">وكيل شؤون معلمين / وكيل مجمع</option>
+                    <option value="student_affairs_vice_principal">وكيل شؤون الطلاب</option>
+                    <option value="computer_lab_prep">محضر الحاسب الآلي</option>
                     <option value="counselor">موجه طلابي</option>
                     <option value="activity_leader">رائد نشاط</option>
-                    <option value="lab_prep">محضر مختبر</option>
+                    <option value="lab_prep">محضر مختبر علوم</option>
                     <option value="admin">إداري / سكرتير</option>
                     <option value="principal">مدير المجمع</option>
                   </select>
@@ -1127,6 +1298,15 @@ export const StaffDirectory: React.FC<StaffDirectoryProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bulk WhatsApp Messaging Modal */}
+      <BulkMessageModal
+        isOpen={isBulkMessageModalOpen}
+        onClose={() => setIsBulkMessageModalOpen(false)}
+        staffList={staffList}
+        initialSelectedStaffIds={Array.from(selectedStaffIds)}
+        schoolSettings={schoolSettings}
+      />
     </div>
   );
 };

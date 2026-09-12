@@ -11,6 +11,7 @@ export const DEFAULT_SCHOOL_SETTINGS: SchoolSettings = {
   academicYear: "1448هـ",
   adminPassword: "admin",
   adminUsername: "admin",
+  principalSignatureUrl: "/principal_signature.svg",
 };
 
 export const INITIAL_STAFF_MEMBERS: StaffMember[] = [];

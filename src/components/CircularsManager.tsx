@@ -19,7 +19,10 @@ import {
   BookmarkPlus,
   Layers,
   Sparkles,
-  Save
+  Save,
+  CheckSquare,
+  Square,
+  MessageSquare
 } from 'lucide-react';
 import { DispatchedDocument, StaffMember, SchoolSettings, CircularDetails, CircularTemplate } from '../types';
 import { generateStaffDispatchWhatsApp, getDocumentSigningUrl } from '../utils/whatsapp';
@@ -55,6 +58,10 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [activeDispatchDoc, setActiveDispatchDoc] = useState<DispatchedDocument | null>(null);
   const [copiedLinkStaffId, setCopiedLinkStaffId] = useState<string | null>(null);
+  const [dispatchFilter, setDispatchFilter] = useState<'all' | 'unsigned' | 'signed'>('all');
+  const [dispatchSelectedStaffIds, setDispatchSelectedStaffIds] = useState<Set<string>>(new Set());
+  const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
+  const [sentInCurrentSession, setSentInCurrentSession] = useState<Set<string>>(new Set());
 
   // Templates Management State
   const [templates, setTemplates] = useState<CircularTemplate[]>(() => loadCircularTemplates());
@@ -382,138 +389,363 @@ export const CircularsManager: React.FC<CircularsManagerProps> = ({
       </div>
 
       {/* WhatsApp Dispatch Drawer / Modal */}
-      {activeDispatchDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 border-r-6 border-r-emerald-600 animate-in fade-in zoom-in duration-150">
-            {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  إرسال التعميم عبر الواتس أب للموظفين
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
-                  {activeDispatchDoc.title}
-                </h3>
+      {activeDispatchDoc && (() => {
+        const targetStaffList = activeDispatchDoc.targetStaffIds
+          .map(id => staffList.find(s => s.id === id))
+          .filter((s): s is StaffMember => !!s);
+
+        const signedCount = targetStaffList.filter(s => !!activeDispatchDoc.signatures[s.id]).length;
+        const unsignedCount = targetStaffList.length - signedCount;
+
+        const displayedStaff = targetStaffList.filter(staff => {
+          const isSigned = !!activeDispatchDoc.signatures[staff.id];
+          if (dispatchFilter === 'unsigned') return !isSigned;
+          if (dispatchFilter === 'signed') return isSigned;
+          return true;
+        });
+
+        // Next unsent unsigned teacher
+        const nextUnsignedStaff = targetStaffList.find(
+          s => !activeDispatchDoc.signatures[s.id] && !sentInCurrentSession.has(s.id)
+        ) || targetStaffList.find(s => !activeDispatchDoc.signatures[s.id]);
+
+        const handleCopyUnsignedPhones = () => {
+          const phones = targetStaffList
+            .filter(s => !activeDispatchDoc.signatures[s.id])
+            .map(s => s.phone.replace(/[^0-9+]/g, ''))
+            .filter(Boolean);
+          if (phones.length === 0) return;
+          navigator.clipboard.writeText(phones.join('\n'));
+          setDispatchNotice(`تم نسخ ${phones.length} رقماً لغير الموقعين إلى الحافظة بنجاح!`);
+          setTimeout(() => setDispatchNotice(null), 4000);
+        };
+
+        const handleCopyAllPhones = () => {
+          const phones = targetStaffList
+            .map(s => s.phone.replace(/[^0-9+]/g, ''))
+            .filter(Boolean);
+          if (phones.length === 0) return;
+          navigator.clipboard.writeText(phones.join('\n'));
+          setDispatchNotice(`تم نسخ ${phones.length} رقماً إلى الحافظة بنجاح!`);
+          setTimeout(() => setDispatchNotice(null), 4000);
+        };
+
+        const toggleSelectDispatchStaff = (id: string) => {
+          setDispatchSelectedStaffIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        };
+
+        const toggleSelectAllDisplayed = () => {
+          if (displayedStaff.length > 0 && displayedStaff.every(s => dispatchSelectedStaffIds.has(s.id))) {
+            setDispatchSelectedStaffIds(prev => {
+              const next = new Set(prev);
+              displayedStaff.forEach(s => next.delete(s.id));
+              return next;
+            });
+          } else {
+            setDispatchSelectedStaffIds(prev => {
+              const next = new Set(prev);
+              displayedStaff.forEach(s => next.add(s.id));
+              return next;
+            });
+          }
+        };
+
+        const handleSendNext = () => {
+          if (!nextUnsignedStaff) return;
+          const { url } = generateStaffDispatchWhatsApp(nextUnsignedStaff, activeDispatchDoc, schoolSettings);
+          setSentInCurrentSession(prev => new Set(prev).add(nextUnsignedStaff.id));
+          window.open(url, '_blank');
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 border-r-6 border-r-emerald-600 animate-in fade-in zoom-in duration-150">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                      إرسال التعميم عبر الواتس أب للموظفين
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      الموقعون: {signedCount} من {targetStaffList.length} ({Math.round((signedCount / (targetStaffList.length || 1)) * 100)}%)
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
+                    {activeDispatchDoc.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setActiveDispatchDoc(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setActiveDispatchDoc(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Instruction Banner */}
-            <div className="bg-emerald-50/70 border-b border-emerald-100 p-3.5 text-xs text-emerald-900 flex items-start gap-2.5">
-              <Send className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-bold">آلية الإرسال والتوقيع بالعلم:</p>
-                <p className="text-emerald-800 mt-0.5">
-                  انقر على زر <span className="font-bold">"إرسال واتساب"</span> بجانب اسم الموظف لفتح تطبيق الواتساب مباشرة مع رسالة مجهزة تتضمن اسمه وسجله ورابط التعميم. يفتح الموظف الرابط على جواله، ويوقع إلكترونياً، ثم يضغط زر الإرسال ليعود الإشعار والتوقيع فوراً على جوال إدارة المجمع.
-                </p>
+              {/* Notice Toast */}
+              {dispatchNotice && (
+                <div className="bg-emerald-600 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{dispatchNotice}</span>
+                  </div>
+                  <button onClick={() => setDispatchNotice(null)} className="cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Action Toolbar */}
+              <div className="bg-slate-50/90 border-b border-slate-200 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-2xs text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setDispatchFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      dispatchFilter === 'all'
+                        ? 'bg-slate-800 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    الكل ({targetStaffList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDispatchFilter('unsigned')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      dispatchFilter === 'unsigned'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-amber-700 hover:text-amber-900'
+                    }`}
+                  >
+                    بانتظار التوقيع ({unsignedCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDispatchFilter('signed')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      dispatchFilter === 'signed'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-emerald-700 hover:text-emerald-900'
+                    }`}
+                  >
+                    الموقعين بالعلم ({signedCount})
+                  </button>
+                </div>
+
+                {/* Bulk Actions */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {nextUnsignedStaff && (
+                    <button
+                      type="button"
+                      onClick={handleSendNext}
+                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs transition-colors cursor-pointer"
+                      title="فتح واتساب للموظف التالي الذي لم يوقع بعد"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>إرسال التالي ({nextUnsignedStaff.name.split(' ')[0]})</span>
+                    </button>
+                  )}
+
+                  {unsignedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCopyUnsignedPhones}
+                      className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+                      title="نسخ أرقام الجوال لجميع المعلمين الذين لم يوقعوا بعد"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-amber-600" />
+                      <span>نسخ أرقام غير الموقعين ({unsignedCount})</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCopyAllPhones}
+                    className="flex items-center gap-1 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 text-xs px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+                    title="نسخ أرقام جميع المستهدفين"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>نسخ كل الأرقام</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Staff List with Action buttons */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 divide-y divide-slate-100 text-xs sm:text-sm">
-              {activeDispatchDoc.targetStaffIds.map((staffId, idx) => {
-                const staff = staffList.find(s => s.id === staffId);
-                if (!staff) return null;
+              {/* Selection Bar inside Drawer if any selected */}
+              {dispatchSelectedStaffIds.size > 0 && (
+                <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200 flex items-center justify-between text-xs text-emerald-900 font-bold">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 text-emerald-600" />
+                    <span>تم تحديد {dispatchSelectedStaffIds.size} موظفاً</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selectedPhones = targetStaffList
+                          .filter(s => dispatchSelectedStaffIds.has(s.id))
+                          .map(s => s.phone.replace(/[^0-9+]/g, ''))
+                          .filter(Boolean);
+                        navigator.clipboard.writeText(selectedPhones.join('\n'));
+                        setDispatchNotice(`تم نسخ ${selectedPhones.length} رقماً للمحددين بنجاح!`);
+                        setTimeout(() => setDispatchNotice(null), 4000);
+                      }}
+                      className="text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                    >
+                      نسخ أرقام المحددين
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDispatchSelectedStaffIds(new Set())}
+                      className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                    >
+                      إلغاء التحديد
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                const signature = activeDispatchDoc.signatures[staffId];
-                const isSigned = !!signature;
-                const { url: waUrl } = generateStaffDispatchWhatsApp(staff, activeDispatchDoc, schoolSettings);
+              {/* Staff List */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 divide-y divide-slate-100 text-xs sm:text-sm">
+                {displayedStaff.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400">
+                    <CheckCircle2 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                    <p className="font-bold text-slate-600">لا يوجد موظفون في هذا التصنيف</p>
+                  </div>
+                ) : (
+                  displayedStaff.map((staff, idx) => {
+                    const signature = activeDispatchDoc.signatures[staff.id];
+                    const isSigned = !!signature;
+                    const isSelected = dispatchSelectedStaffIds.has(staff.id);
+                    const wasSentThisSession = sentInCurrentSession.has(staff.id);
+                    const { url: waUrl } = generateStaffDispatchWhatsApp(staff, activeDispatchDoc, schoolSettings);
 
-                return (
-                  <div key={staff.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-400 text-xs w-6">{idx + 1}</span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900">{staff.name}</span>
-                          <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                            {staff.roleTitle}
-                          </span>
+                    return (
+                      <div 
+                        key={staff.id} 
+                        className={`py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                          isSelected ? 'bg-emerald-50/50 -mx-4 px-4 sm:-mx-5 sm:px-5' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectDispatchStaff(staff.id)}
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer shrink-0"
+                            title={`تحديد ${staff.name}`}
+                          />
+                          <span className="font-mono text-slate-400 text-xs w-6">{idx + 1}</span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">{staff.name}</span>
+                              <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                {staff.roleTitle}
+                              </span>
+                              {wasSentThisSession && (
+                                <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-bold">
+                                  تم الفتح في هذه الجلسة
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                              <span>السجل: <span className="font-mono font-medium text-slate-700" dir="ltr">{maskNationalId(staff.nationalId)}</span></span>
+                              <span>الجوال: <span className="font-mono font-medium text-slate-700" dir="ltr">{staff.phone}</span></span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                          <span>السجل: <span className="font-mono font-medium text-slate-700" dir="ltr">{maskNationalId(staff.nationalId)}</span></span>
-                          <span>الجوال: <span className="font-mono font-medium text-slate-700" dir="ltr">{staff.phone}</span></span>
+
+                        {/* Status & Actions */}
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          {isSigned ? (
+                            <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 text-xs font-bold">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span>تم التوقيع بالعلم</span>
+                              <span className="text-[10px] text-emerald-600">({signature.formattedDate.split(' ')[0]})</span>
+                            </div>
+                          ) : (
+                            <span className="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200 text-xs font-semibold">
+                              في انتظار التوقيع
+                            </span>
+                          )}
+
+                          {/* Direct WhatsApp Send */}
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setSentInCurrentSession(prev => new Set(prev).add(staff.id))}
+                            className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors ${
+                              isSigned
+                                ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                            }`}
+                            title="إرسال رسالة الواتس أب مع رابط التوقيع للموظف"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>{isSigned ? 'إعادة إرسال' : 'إرسال واتساب'}</span>
+                          </a>
+
+                          {/* Copy Direct Link */}
+                          <button
+                            onClick={() => handleCopyLink(activeDispatchDoc.id, staff.id)}
+                            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                            title="نسخ رابط التعميم المخصص للموظف"
+                          >
+                            {copiedLinkStaffId === staff.id ? (
+                              <Check className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+
+                          {/* Test Open Sign Portal for this teacher */}
+                          <button
+                            onClick={() => onOpenSignPortal(activeDispatchDoc.id, staff.id)}
+                            className="p-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors cursor-pointer"
+                            title="فتح شاشة التوقيع كأنك الموظف (تجربة وتوقيع)"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })
+                )}
+              </div>
 
-                    {/* Status & Actions */}
-                    <div className="flex items-center gap-2 self-end sm:self-center">
-                      {isSigned ? (
-                        <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 text-xs font-bold">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          <span>تم التوقيع بالعلم</span>
-                          <span className="text-[10px] text-emerald-600">({signature.formattedDate.split(' ')[0]})</span>
-                        </div>
-                      ) : (
-                        <span className="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200 text-xs font-semibold">
-                          في انتظار التوقيع
-                        </span>
-                      )}
-
-                      {/* Direct WhatsApp Send */}
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors ${
-                          isSigned
-                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                        }`}
-                        title="إرسال رسالة الواتس أب مع رابط التوقيع للموظف"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>{isSigned ? 'إعادة إرسال' : 'إرسال واتساب'}</span>
-                      </a>
-
-                      {/* Copy Direct Link */}
-                      <button
-                        onClick={() => handleCopyLink(activeDispatchDoc.id, staff.id)}
-                        className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                        title="نسخ رابط التعميم المخصص للموظف"
-                      >
-                        {copiedLinkStaffId === staff.id ? (
-                          <Check className="w-4 h-4 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-
-                      {/* Test Open Sign Portal for this teacher */}
-                      <button
-                        onClick={() => onOpenSignPortal(activeDispatchDoc.id, staff.id)}
-                        className="p-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors cursor-pointer"
-                        title="فتح شاشة التوقيع كأنك الموظف (تجربة وتوقيع)"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 rounded-b-2xl">
-              <span className="text-slate-500">
-                إجمالي الموظفين المستهدفين: <strong className="text-slate-800">{activeDispatchDoc.targetStaffIds.length}</strong>
-              </span>
-              <button
-                onClick={() => setActiveDispatchDoc(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold cursor-pointer"
-              >
-                إغلاق النافذة
-              </button>
+              {/* Footer */}
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 rounded-b-2xl">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="select-all-displayed-drawer"
+                    checked={displayedStaff.length > 0 && displayedStaff.every(s => dispatchSelectedStaffIds.has(s.id))}
+                    onChange={toggleSelectAllDisplayed}
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <label htmlFor="select-all-displayed-drawer" className="text-slate-600 font-semibold cursor-pointer">
+                    تحديد المعروضين ({displayedStaff.length})
+                  </label>
+                </div>
+                <button
+                  onClick={() => setActiveDispatchDoc(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold cursor-pointer"
+                >
+                  إغلاق النافذة
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Create New Circular Modal */}
       {isNewModalOpen && (

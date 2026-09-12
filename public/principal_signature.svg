@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 380" width="100%" height="100%" fill="none">
+  <g stroke="#184de6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Dot above diagonal line -->
+    <circle cx="188" cy="172" r="7" fill="#184de6" stroke="none" />
+    
+    <!-- Accent dash below diagonal line -->
+    <path d="M 245 272 C 254 266, 264 258, 272 250" stroke-width="11" />
+    
+    <!-- Main flourish: bottom-left loop into long diagonal into top acute fold and downward hook -->
+    <path d="M 142 245
+             C 122 265, 95 305, 88 332
+             C 80 358, 98 368, 114 358
+             C 134 344, 150 298, 142 260
+             C 138 244, 148 240, 160 244
+             L 415 80
+             C 424 74, 432 78, 424 88
+             C 402 115, 328 136, 298 143
+             C 284 146, 282 158, 296 166
+             C 314 176, 344 168, 358 186
+             C 368 200, 362 225, 374 235
+             C 384 242, 402 238, 412 222" />
+  </g>
+</svg>

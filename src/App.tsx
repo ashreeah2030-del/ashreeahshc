@@ -23,6 +23,8 @@ import {
   updateStaffPin,
   loadRecognitionAwards,
   addRecognitionAward,
+  addBulkRecognitionAwards,
+  updateRecognitionAward,
   deleteRecognitionAward
 } from './utils/storage';
 import { Header } from './components/Header';
@@ -232,8 +234,20 @@ export default function App() {
     setStaffList(result.updatedStaff);
   };
 
+  const handleAddBulkAwards = (awardsDataList: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>[]) => {
+    const result = addBulkRecognitionAwards(awardsDataList, staffList);
+    setAwards(result.updatedAwards);
+    setStaffList(result.updatedStaff);
+  };
+
   const handleDeleteAward = (awardId: string) => {
     const result = deleteRecognitionAward(awardId, staffList);
+    setAwards(result.updatedAwards);
+    setStaffList(result.updatedStaff);
+  };
+
+  const handleUpdateAward = (updatedAward: RecognitionAward) => {
+    const result = updateRecognitionAward(updatedAward, staffList);
     setAwards(result.updatedAwards);
     setStaffList(result.updatedStaff);
   };
@@ -374,6 +388,7 @@ export default function App() {
             {activeTab === 'staff' && (
               <StaffDirectory
                 staffList={staffList}
+                schoolSettings={schoolSettings}
                 onAddStaff={handleAddStaff}
                 onUpdateStaff={handleUpdateStaff}
                 onDeleteStaff={handleDeleteStaff}
@@ -421,6 +436,8 @@ export default function App() {
                 schoolSettings={schoolSettings}
                 awards={awards}
                 onAddAward={handleAddAward}
+                onAddBulkAwards={handleAddBulkAwards}
+                onUpdateAward={handleUpdateAward}
                 onDeleteAward={handleDeleteAward}
               />
             )}

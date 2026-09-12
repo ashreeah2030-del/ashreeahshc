@@ -213,18 +213,22 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({
   const roleComplianceData = useMemo(() => {
     const roleMap: Record<string, { totalReq: number; totalSign: number; count: number }> = {
       'teacher': { totalReq: 0, totalSign: 0, count: 0 },
-      'admin': { totalReq: 0, totalSign: 0, count: 0 },
       'vice_principal': { totalReq: 0, totalSign: 0, count: 0 },
+      'student_affairs_vice_principal': { totalReq: 0, totalSign: 0, count: 0 },
+      'computer_lab_prep': { totalReq: 0, totalSign: 0, count: 0 },
       'counselor': { totalReq: 0, totalSign: 0, count: 0 },
+      'admin': { totalReq: 0, totalSign: 0, count: 0 },
       'other': { totalReq: 0, totalSign: 0, count: 0 }
     };
 
     staffComplianceData.forEach(item => {
       let key = 'other';
       if (item.staff.role === 'teacher') key = 'teacher';
-      else if (item.staff.role === 'admin') key = 'admin';
+      else if (item.staff.role === 'student_affairs_vice_principal') key = 'student_affairs_vice_principal';
+      else if (item.staff.role === 'computer_lab_prep') key = 'computer_lab_prep';
       else if (item.staff.role === 'vice_principal') key = 'vice_principal';
       else if (item.staff.role === 'counselor') key = 'counselor';
+      else if (item.staff.role === 'admin') key = 'admin';
 
       roleMap[key].count += 1;
       roleMap[key].totalReq += item.totalTargeted;
@@ -233,9 +237,11 @@ export const ReportsManager: React.FC<ReportsManagerProps> = ({
 
     const labels: Record<string, string> = {
       'teacher': 'المعلمون',
-      'admin': 'الإدارة المدرسية',
       'vice_principal': 'وكلاء المجمع',
+      'student_affairs_vice_principal': 'وكيل شؤون الطلاب',
+      'computer_lab_prep': 'محضر الحاسب الآلي',
       'counselor': 'التوجيه الطلابي',
+      'admin': 'الإدارة المدرسية',
       'other': 'باقي المنسوبين'
     };
 

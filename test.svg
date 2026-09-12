@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500" width="100%" height="100%" fill="none">
+  <!-- Principal Official Signature - مجمع الشريعة التعليمي -->
+  <g stroke="#1d4ed8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Dot above diagonal -->
+    <circle cx="245" cy="225" r="7" fill="#1d4ed8" stroke="none" />
+    
+    <!-- Accent dash below diagonal -->
+    <path d="M 320 375 Q 332 370 345 358" />
+    
+    <!-- Main flourish: bottom-left loop into long rising diagonal into top-right folded ribbon and hook -->
+    <path d="M 175 350 
+             C 160 380, 125 435, 125 465 
+             C 125 490, 145 500, 165 480 
+             C 185 460, 205 385, 175 350 
+             C 155 325, 135 345, 145 375
+             C 155 405, 185 415, 215 395
+             L 540 145
+             L 395 185
+             C 380 189, 375 198, 385 208
+             C 395 218, 435 235, 450 245
+             C 465 255, 470 270, 465 295
+             C 460 320, 480 330, 505 320
+             C 525 310, 535 295, 530 280" />
+  </g>
+</svg>

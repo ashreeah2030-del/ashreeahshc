@@ -19,7 +19,6 @@ import {
   ShieldCheck, 
   Lock, 
   Eye, 
-  EyeOff,
   Printer, 
   FileCheck,
   Check,
@@ -37,6 +36,7 @@ import { CircularProgress } from './CircularProgress';
 import { AcademicCalendarView } from './AcademicCalendarView';
 import { maskNationalId } from '../utils/formatters';
 import { CertificateModal } from './CertificateModal';
+import { getTeacherBadge, BADGE_TIERS_GUIDE } from '../utils/badges';
 
 interface StaffPortalViewProps {
   currentStaff: StaffMember;
@@ -63,7 +63,6 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   const [isChangingPin, setIsChangingPin] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState(false);
-  const [showMyNationalId, setShowMyNationalId] = useState(false);
 
   // Certificate modal preview
   const [viewingAward, setViewingAward] = useState<RecognitionAward | null>(null);
@@ -73,6 +72,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   const myTotalPoints = typeof currentStaff.points === 'number'
     ? currentStaff.points
     : myAwards.reduce((sum, a) => sum + (a.points || 0), 0);
+  const myBadge = getTeacherBadge(myTotalPoints);
 
   // Filter documents belonging to THIS staff member only!
   // Inquiries strictly issued to this staff member
@@ -87,7 +87,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     const aud = doc.circularData?.targetAudience || 'all';
     if (aud === 'all') return true;
     if (aud === 'teachers' && (currentStaff.role === 'teacher' || currentStaff.role === 'activity_leader')) return true;
-    if (aud === 'admins' && (currentStaff.role === 'admin' || currentStaff.role === 'counselor' || currentStaff.role === 'student_affairs' || currentStaff.role === 'vice_principal')) return true;
+    if (aud === 'admins' && (currentStaff.role === 'admin' || currentStaff.role === 'counselor' || currentStaff.role === 'student_affairs' || currentStaff.role === 'student_affairs_vice_principal' || currentStaff.role === 'computer_lab_prep' || currentStaff.role === 'vice_principal' || currentStaff.role === 'lab_prep')) return true;
     if (aud === currentStaff.stage) return true;
     if (doc.targetStaffIds.includes(currentStaff.id)) return true;
     return false;
@@ -137,9 +137,21 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     {schoolSettings.schoolName}
                   </span>
                 </div>
-                <h1 className="text-lg sm:text-xl font-black text-white mt-1">
-                  المكرم/ {currentStaff.name}
-                </h1>
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                  <h1 className="text-lg sm:text-xl font-black text-white">
+                    المكرم/ {currentStaff.name}
+                  </h1>
+                  {myBadge.type !== 'none' ? (
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 font-bold ${myBadge.pillClass}`}>
+                      <span>{myBadge.icon}</span>
+                      <span>{myBadge.name}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[11px] bg-emerald-900/90 text-emerald-200 border border-emerald-700/60 px-2 py-0.5 rounded-full font-semibold">
+                      متبقي {myBadge.remainingToNext} نقطة للشارة المثالية
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-300 mt-0.5">
                   {currentStaff.roleTitle} {currentStaff.subject ? `• تخصص: ${currentStaff.subject}` : ''}
                 </p>
@@ -198,20 +210,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
             </div>
 
             <div className="bg-slate-900/60 p-2 rounded-xl border border-emerald-800/40 border-r-3 border-r-amber-400">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 block text-[10px]">الهوية الوطنية (محمية):</span>
-                <button
-                  type="button"
-                  onClick={() => setShowMyNationalId(!showMyNationalId)}
-                  className="text-slate-400 hover:text-amber-300 transition-colors p-0.5"
-                  title={showMyNationalId ? "إخفاء رقم الهوية (حماية الخصوصية)" : "إظهار رقم الهوية"}
-                  aria-label="تبديل إظهار الهوية"
-                >
-                  {showMyNationalId ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
+              <span className="text-slate-400 block text-[10px]">الهوية الوطنية (محمية):</span>
               <span className="font-mono font-bold text-amber-300 tracking-wider text-sm block mt-0.5" dir="ltr">
-                {showMyNationalId ? currentStaff.nationalId : maskNationalId(currentStaff.nationalId)}
+                {maskNationalId(currentStaff.nationalId)}
               </span>
             </div>
             <div className="bg-slate-900/60 p-2 rounded-xl border border-emerald-800/40 border-r-3 border-r-emerald-400">
@@ -722,7 +723,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               <div className="text-center md:text-right space-y-2 max-w-xl">
                 <div className="inline-flex items-center gap-1.5 bg-slate-950/20 backdrop-blur-xs px-3 py-1 rounded-full text-xs font-black text-slate-950">
                   <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                  <span>برنامج التحفيز والتكريم المستمر لمنسوبي المجمع</span>
+                  <span>برنامج شارات التميز والتحفيز المستمر لمنسوبي المجمع</span>
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
@@ -730,41 +731,38 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 </h2>
 
                 <p className="text-sm font-semibold text-slate-900 leading-relaxed">
-                  {myTotalPoints >= 100 ? (
-                    '👑 رائع جداً! أنت ضمن نخبة المعلمين المتميزين فـارس المجمع. نشكر لك عطاءك اللامحدود وانضباطك القيادي.'
-                  ) : myTotalPoints >= 50 ? (
-                    '🥈 أداء متقدم ومبهر! واصل تميزك في الميدان التعليمي والتربوي لتصل إلى وسام فارس المجمع.'
-                  ) : myTotalPoints >= 25 ? (
-                    '🥉 بداية مشرفة وبصمة طيبة! كل مشاركة في الطابور أو الإشراف ترفع رصيدك وتُخلّد عطاءك.'
+                  {myBadge.type === 'star' ? (
+                    '⭐ مبارك لك! لقد حققت أعلى وسام "شارة النجم" (300+ نقطة) تقديرًا لريادتك وعطائك الاستثنائي في المجمع.'
+                  ) : myBadge.type === 'advanced' ? (
+                    '💎 رائع جداً! لقد حققت "الشارة المتقدم" (200+ نقطة). واصل عطاءك المتميز للوصول إلى "شارة النجم".'
+                  ) : myBadge.type === 'ideal' ? (
+                    '🏅 تهانينا! لقد حققت "الشارة المثالية" (100+ نقطة). أنت نموذج ملهم ونشكر لك انضباطك وجهودك.'
                   ) : (
-                    '🌱 مرحباً بك في مسار التميز! اجمع النقاط من خلال التزام الطابور الصباحي، الحصص النموذجية، والإشراف المدرسي.'
+                    `🌱 مرحباً بك في مسار التميز! أنت تجمع النقاط حالياً، متبقي لك ${myBadge.remainingToNext} نقطة فقط لتحقيق "الشارة المثالية".`
                   )}
                 </p>
 
                 <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-2">
-                  <span className="bg-slate-950 text-amber-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs">
-                    <Crown className="w-4 h-4 text-amber-400" />
-                    <span>
-                      {myTotalPoints >= 100
-                        ? 'وسام التميز الذهبي (فارس المجمع)'
-                        : myTotalPoints >= 50
-                        ? 'وسام العطاء الفضي (معلم متميز)'
-                        : myTotalPoints >= 25
-                        ? 'وسام المبادرة البرونزي'
-                        : 'وسام المشاركة والانضباط'}
-                    </span>
+                  <span className="bg-slate-950 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs">
+                    <span>{myBadge.icon}</span>
+                    <span>{myBadge.type !== 'none' ? myBadge.name : 'مسار التميز (دون 100 نقطة)'}</span>
                   </span>
-                  <span className="bg-white/40 text-slate-950 px-3 py-1 rounded-xl text-xs font-bold">
+                  {myBadge.nextPoints && (
+                    <span className="bg-white/40 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold">
+                      متبقي {myBadge.remainingToNext} نقطة لـ {myBadge.type === 'none' ? 'الشارة المثالية' : myBadge.type === 'ideal' ? 'الشارة المتقدم' : 'شارة النجم'}
+                    </span>
+                  )}
+                  <span className="bg-white/40 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold">
                     إجمالي شهادات الشكر: {myAwards.length}
                   </span>
                 </div>
               </div>
 
-              {/* Big Score Medal Circle */}
+              {/* Big Score Badge Circle */}
               <div className="shrink-0 flex flex-col items-center justify-center">
                 <div className="w-32 h-32 rounded-full bg-slate-950 text-amber-400 border-4 border-amber-300/80 shadow-xl flex flex-col items-center justify-center p-3 relative">
-                  <Trophy className="w-6 h-6 text-amber-300 mb-0.5" />
-                  <span className="font-mono font-black text-3xl sm:text-4xl text-white tracking-tight leading-none">
+                  <span className="text-2xl mb-0.5">{myBadge.icon}</span>
+                  <span className="font-mono font-black text-3xl text-white tracking-tight leading-none">
                     {myTotalPoints}
                   </span>
                   <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mt-1">
@@ -774,31 +772,67 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               </div>
             </div>
 
-            {/* Sub-breakdown Cards */}
-            <div className="mt-6 pt-5 border-t border-slate-950/15 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
-                <span className="text-slate-800 block text-[10px] font-bold">انضباط الطابور الصباحي:</span>
-                <span className="font-mono font-black text-slate-950 text-base">
-                  {myAwards.filter(a => a.category === 'morning_assembly').reduce((s, a) => s + a.points, 0)} نقطة
-                </span>
-              </div>
-              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
-                <span className="text-slate-800 block text-[10px] font-bold">تأدية حصة مثالية:</span>
-                <span className="font-mono font-black text-slate-950 text-base">
-                  {myAwards.filter(a => a.category === 'ideal_lesson').reduce((s, a) => s + a.points, 0)} نقطة
-                </span>
-              </div>
-              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
-                <span className="text-slate-800 block text-[10px] font-bold">الإشراف والمناوبة:</span>
-                <span className="font-mono font-black text-slate-950 text-base">
-                  {myAwards.filter(a => a.category === 'supervision').reduce((s, a) => s + a.points, 0)} نقطة
-                </span>
-              </div>
-              <div className="bg-white/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/40">
-                <span className="text-slate-800 block text-[10px] font-bold">مبادرات وتكريمات:</span>
-                <span className="font-mono font-black text-slate-950 text-base">
-                  {myAwards.filter(a => a.category === 'other').reduce((s, a) => s + a.points, 0)} نقطة
-                </span>
+            {/* Official 3 Badges Track */}
+            <div className="mt-6 pt-5 border-t border-slate-950/15">
+              <h4 className="text-xs font-black text-slate-950 mb-3 flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-slate-950" />
+                <span>سلم شارات التميز المعتمدة للمعلمين:</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {BADGE_TIERS_GUIDE.map(tier => {
+                  const isEarned = myTotalPoints >= tier.threshold;
+                  const isNext = !isEarned && (
+                    (tier.tier === 'ideal' && myTotalPoints < 100) ||
+                    (tier.tier === 'advanced' && myTotalPoints >= 100 && myTotalPoints < 200) ||
+                    (tier.tier === 'star' && myTotalPoints >= 200 && myTotalPoints < 300)
+                  );
+
+                  return (
+                    <div
+                      key={tier.tier}
+                      className={`p-3.5 rounded-2xl border transition-all ${
+                        isEarned
+                          ? 'bg-slate-950 text-white border-amber-400/80 shadow-sm ring-2 ring-amber-300/50'
+                          : isNext
+                          ? 'bg-white/90 text-slate-900 border-amber-400 shadow-2xs'
+                          : 'bg-white/40 text-slate-700 border-white/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{tier.icon}</span>
+                          <div>
+                            <span className={`block font-black text-xs ${isEarned ? 'text-amber-300' : 'text-slate-900'}`}>
+                              {tier.name}
+                            </span>
+                            <span className={`block text-[10px] font-mono font-bold ${isEarned ? 'text-amber-200/80' : 'text-slate-500'}`}>
+                              {tier.threshold} نقطة
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          {isEarned ? (
+                            <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-black flex items-center gap-1">
+                              <Check className="w-3 h-3" />
+                              <span>محققة</span>
+                            </span>
+                          ) : isNext ? (
+                            <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full font-black">
+                              قيد التحصيل ({tier.threshold - myTotalPoints} متبقي)
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
+                              مستوى قادم
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className={`text-[11px] mt-2 line-clamp-1 ${isEarned ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {tier.description}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

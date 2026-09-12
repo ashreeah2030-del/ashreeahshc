@@ -21,7 +21,14 @@ import {
   ExternalLink,
   ChevronRight,
   Flame,
-  Crown
+  Crown,
+  Users,
+  CheckSquare,
+  Square,
+  X,
+  CalendarDays,
+  Zap,
+  Heart
 } from 'lucide-react';
 import { 
   StaffMember, 
@@ -29,15 +36,19 @@ import {
   RecognitionAward, 
   RecognitionCategory 
 } from '../types';
-import { maskNationalId, getFormattedHijriDate } from '../utils/formatters';
+import { maskNationalId, getFormattedHijriDate, parseDateString, formatToIsoDate } from '../utils/formatters';
 import { generateRecognitionWhatsApp } from '../utils/whatsapp';
 import { CertificateModal } from './CertificateModal';
+import { DualCalendarPicker } from './DualCalendarPicker';
+import { getTeacherBadge, BADGE_TIERS_GUIDE } from '../utils/badges';
 
 interface RecognitionManagerProps {
   staffList: StaffMember[];
   schoolSettings: SchoolSettings;
   awards: RecognitionAward[];
   onAddAward: (awardData: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>) => void;
+  onAddBulkAwards?: (awardsDataList: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>[]) => void;
+  onUpdateAward?: (updatedAward: RecognitionAward) => void;
   onDeleteAward: (awardId: string) => void;
 }
 
@@ -55,38 +66,83 @@ const CATEGORIES: CategoryConfig[] = [
   {
     id: 'morning_assembly',
     name: 'المشاركة في انضباط الطابور الصباحي',
-    defaultPoints: 25,
-    defaultTitle: 'شهادة شكر لانضباط الطابور الصباحي',
-    defaultCitation: 'تقديرًا لحضوره المبكر وتفانيه المشهود في تنظيم ومتابعة الاصطفاف الصباحي، وغرس الانضباط والقدوة الحسنة في نفوس أبنائنا الطلاب.',
+    defaultPoints: 10,
+    defaultTitle: 'شهادة شكر للمشاركة في انضباط الطابور الصباحي',
+    defaultCitation: 'تقديرًا لحضوره المبكر ومشاركته الفاعلة والمتميزة في تنظيم ومتابعة انضباط الطابور الصباحي والاصطفاف المدرسي، وغرس روح الانضباط والقدوة الحسنة في نفوس الطلاب.',
     badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
     icon: <Flame className="w-4 h-4 text-amber-600" />,
   },
   {
     id: 'ideal_lesson',
     name: 'تأدية حصة مثالية ونموذجية',
-    defaultPoints: 35,
-    defaultTitle: 'شهادة شكر لتأدية حصة نموذجية مثالية',
-    defaultCitation: 'تقديرًا لإبداعه وتميزه في تقديم حصة دراسية نموذجية محققة لأعلى معايير جودة التدريس واستراتيجيات التعلم النشط والتفاعل الصفي الإيجابي.',
+    defaultPoints: 20,
+    defaultTitle: 'شهادة شكر لتأدية حصة نموذجية ومثالية',
+    defaultCitation: 'تقديرًا لإبداعه وتميزه في تقديم وتأدية حصة صفية نموذجية ومثالية محققة لأعلى معايير جودة التدريس واستراتيجيات التعلم النشط والتفاعل الصفي المتميز.',
     badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
     icon: <GraduationCap className="w-4 h-4 text-emerald-600" />,
   },
   {
-    id: 'supervision',
-    name: 'المشاركة في الإشراف والمناوبة',
-    defaultPoints: 25,
-    defaultTitle: 'شهادة شكر للمشاركة في الإشراف والمناوبة',
-    defaultCitation: 'تقديرًا لالتزامه العالي وحرصه الدائم على حفظ أمن وسلامة الطلاب أثناء الإشراف اليومي والمناوبة الميدانية في فناء ومرافق المجمع.',
+    id: 'daily_supervision',
+    name: 'المشاركة في الإشراف اليومي',
+    defaultPoints: 15,
+    defaultTitle: 'شهادة شكر للمشاركة في الإشراف اليومي',
+    defaultCitation: 'تقديرًا لالتزامه وحرصه العالي ومشاركته الفاعلة في الإشراف اليومي المدرسي، والمساهمة المخلصة في توفير بيئة تعليمية آمنة ومنضبطة لأبنائنا الطلاب.',
     badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
     icon: <ShieldCheck className="w-4 h-4 text-blue-600" />,
   },
   {
-    id: 'custom',
-    name: 'تكريم وتميز ومبادرة نوعية',
-    defaultPoints: 30,
-    defaultTitle: 'شهادة شكر وتقدير لمبادرة تعليمية متميزة',
-    defaultCitation: 'تقديرًا لمبادراته التربوية الفاعلة وجهوده المخلصة في خدمة البيئة التعليمية والمساهمة الرائدة في تعزيز جودة العمل المدرسي.',
+    id: 'duty_shift',
+    name: 'المشاركة في المناوبة',
+    defaultPoints: 20,
+    defaultTitle: 'شهادة شكر للمشاركة الفاعلة في المناوبة',
+    defaultCitation: 'تقديرًا لتفانيه وحرصه المشهود في أداء المناوبة الميدانية المدرسية بفاعلية وانضباط عالٍ، ومتابعة سلامة وانصراف الطلاب بكل أمانة وإخلاص.',
+    badgeColor: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+    icon: <Clock className="w-4 h-4 text-indigo-600" />,
+  },
+  {
+    id: 'school_discipline',
+    name: 'تعزيز الانضباط المدرسي',
+    defaultPoints: 15,
+    defaultTitle: 'شهادة شكر لتعزيز الانضباط المدرسي',
+    defaultCitation: 'تقديرًا لدوره الريادي ومساهمته القيادية في تعزيز وتكريس ثقافة الانضباط المدرسي وحث الطلاب على الانتظام والحضور والانضباط السلوكي.',
+    badgeColor: 'bg-teal-100 text-teal-900 border-teal-300',
+    icon: <CheckCircle2 className="w-4 h-4 text-teal-600" />,
+  },
+  {
+    id: 'student_activities',
+    name: 'المشاركة في الأنشطة الطلابية والفعاليات',
+    defaultPoints: 10,
+    defaultTitle: 'شهادة شكر للمشاركة في الأنشطة الطلابية والفعاليات',
+    defaultCitation: 'تقديرًا لعطائه وتفاعله المثمر في تنظيم وإنجاح الأنشطة والفعاليات الطلابية والمدرسية وتنمية مهارات وإبداعات أبنائنا الطلاب.',
+    badgeColor: 'bg-rose-100 text-rose-900 border-rose-300',
+    icon: <Trophy className="w-4 h-4 text-rose-600" />,
+  },
+  {
+    id: 'activity_sessions',
+    name: 'تفعيل حصص النشاط',
+    defaultPoints: 5,
+    defaultTitle: 'شهادة شكر لتفعيل حصص النشاط الطلابي',
+    defaultCitation: 'تقديرًا لتميزه في تفعيل واستثمار حصص النشاط الطلابي ببرامج ومناشط هادفة تسهم في صقل مواهب الطلاب وإثراء البيئة المدرسية.',
+    badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+    icon: <Zap className="w-4 h-4 text-amber-600" />,
+  },
+  {
+    id: 'positive_behavior',
+    name: 'مبادرة لتعزيز السلوك الإيجابي',
+    defaultPoints: 20,
+    defaultTitle: 'شهادة شكر لمبادرة تعزيز السلوك الإيجابي',
+    defaultCitation: 'تقديرًا لإطلاقه وتنفيذه مبادرة تربوية متميزة لتعزيز السلوك الإيجابي وغرس القيم والأخلاق الفاضلة والتعامل التربوي الراقي بين الطلاب.',
     badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
-    icon: <Award className="w-4 h-4 text-purple-600" />,
+    icon: <Heart className="w-4 h-4 text-purple-600" />,
+  },
+  {
+    id: 'mutual_visits',
+    name: 'تنفيذ ومشاركة في الزيارات المتبادلة',
+    defaultPoints: 20,
+    defaultTitle: 'شهادة شكر للمشاركة في الزيارات الصفية المتبادلة',
+    defaultCitation: 'تقديرًا لمشاركته الفاعلة وحرصه المهني في تنفيذ الزيارات التبادلية بين الزملاء وتبادل الخبرات التدريسية بما يعزز جودة ونواتج التعلم.',
+    badgeColor: 'bg-cyan-100 text-cyan-900 border-cyan-300',
+    icon: <Users className="w-4 h-4 text-cyan-600" />,
   },
 ];
 
@@ -95,13 +151,20 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
   schoolSettings,
   awards,
   onAddAward,
+  onAddBulkAwards,
+  onUpdateAward,
   onDeleteAward,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'create' | 'ledger' | 'leaderboard'>('create');
   
-  // Create Award Form State
-  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+  // Create Award Form State - Multi-selection of Teachers
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+  const [staffSearch, setStaffSearch] = useState<string>('');
+  const [staffStageFilter, setStaffStageFilter] = useState<'all' | 'elementary' | 'intermediate' | 'secondary'>('all');
+
   const [selectedCategory, setSelectedCategory] = useState<RecognitionCategory>('morning_assembly');
+  const [issueDate, setIssueDate] = useState<string>(() => formatToIsoDate(new Date()));
+  const [hijriDate, setHijriDate] = useState<string>(() => getFormattedHijriDate(new Date()));
   const [customTitle, setCustomTitle] = useState<string>(CATEGORIES[0].defaultTitle);
   const [points, setPoints] = useState<number>(CATEGORIES[0].defaultPoints);
   const [citationText, setCitationText] = useState<string>(CATEGORIES[0].defaultCitation);
@@ -117,6 +180,37 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
   // Success Feedback
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
+  // Filtered visible staff for selection
+  const visibleStaff = useMemo(() => {
+    return staffList.filter(s => {
+      const q = staffSearch.trim().toLowerCase();
+      const matchesSearch = !q || 
+        s.name.toLowerCase().includes(q) ||
+        s.roleTitle.toLowerCase().includes(q) ||
+        (s.nationalId && s.nationalId.includes(q));
+      
+      const matchesStage = staffStageFilter === 'all' || s.stage === staffStageFilter || s.stage === 'all';
+      return matchesSearch && matchesStage;
+    });
+  }, [staffList, staffSearch, staffStageFilter]);
+
+  // Selection toggle handlers
+  const toggleStaffSelection = (id: string) => {
+    setSelectedStaffIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllVisible = () => {
+    const visibleIds = visibleStaff.map(s => s.id);
+    setSelectedStaffIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+  };
+
+  const handleSelectAllTeachers = () => {
+    const teacherIds = staffList.filter(s => s.role === 'teacher').map(s => s.id);
+    setSelectedStaffIds(prev => Array.from(new Set([...prev, ...teacherIds])));
+  };
+
   // When changing category, auto-fill default title, points and citation
   const handleCategoryChange = (catId: RecognitionCategory) => {
     setSelectedCategory(catId);
@@ -128,26 +222,34 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
     }
   };
 
-  // Submit new award
+  // Date handlers
+  const handleDateChange = (val: string) => {
+    setIssueDate(val);
+    if (val) {
+      const parsed = parseDateString(val);
+      setHijriDate(getFormattedHijriDate(parsed));
+    }
+  };
+
+  // Submit new award(s)
   const handleCreateAward = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStaffId) {
-      alert('فضلاً اختر المعلم أو الموظف المراد تكريمه');
+    if (selectedStaffIds.length === 0) {
+      alert('فضلاً حدد معلماً واحداً على الأقل لإصدار شهادة الشكر له');
       return;
     }
 
-    const staff = staffList.find(s => s.id === selectedStaffId);
-    if (!staff) {
-      alert('الموظف المحدد غير موجود');
+    const selectedStaffList = staffList.filter(s => selectedStaffIds.includes(s.id));
+    if (selectedStaffList.length === 0) {
+      alert('المعلمون المحددون غير موجودين في قائمة المنسوبين');
       return;
     }
 
     const categoryObj = CATEGORIES.find(c => c.id === selectedCategory) || CATEGORIES[0];
-    const today = new Date();
-    const isoDate = today.toISOString().split('T')[0];
-    const hijri = getFormattedHijriDate(today);
+    const finalIsoDate = issueDate || formatToIsoDate(new Date());
+    const finalHijri = hijriDate.trim() || getFormattedHijriDate(parseDateString(finalIsoDate));
 
-    const awardPayload: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'> = {
+    const awardsPayload: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>[] = selectedStaffList.map(staff => ({
       staffId: staff.id,
       staffName: staff.name,
       staffNationalId: staff.nationalId,
@@ -158,23 +260,33 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
       title: customTitle.trim() || categoryObj.defaultTitle,
       details: citationText.trim() || categoryObj.defaultCitation,
       points: Number(points) || 10,
-      date: isoDate,
-      hijriDate: hijri,
+      date: finalIsoDate,
+      hijriDate: finalHijri,
       awardedBy: `إدارة ${schoolSettings.schoolName}`,
       notes: notes.trim() || undefined,
-    };
+    }));
 
-    onAddAward(awardPayload);
+    if (onAddBulkAwards) {
+      onAddBulkAwards(awardsPayload);
+    } else {
+      awardsPayload.forEach(payload => onAddAward(payload));
+    }
 
-    setSuccessBanner(`تم إصدار شهادة الشكر والتقدير ومنح +${points} نقطة بنجاح للأستاذ/ ${staff.name}!`);
-    setTimeout(() => setSuccessBanner(null), 5000);
+    if (selectedStaffList.length === 1) {
+      setSuccessBanner(`تم إصدار شهادة الشكر والتقدير بتاريخ (${finalHijri}) ومنح +${points} نقطة بنجاح للأستاذ/ ${selectedStaffList[0].name}!`);
+    } else {
+      setSuccessBanner(`تم إصدار (${selectedStaffList.length}) شهادات شكر وتقدير ومنح +${points} نقطة تميز لكل معلم بنجاح بتاريخ (${finalHijri})!`);
+    }
+    setTimeout(() => setSuccessBanner(null), 6000);
 
     // Reset Form
-    setSelectedStaffId('');
+    setSelectedStaffIds([]);
     handleCategoryChange('morning_assembly');
+    setIssueDate(formatToIsoDate(new Date()));
+    setHijriDate(getFormattedHijriDate(new Date()));
     setNotes('');
 
-    // Switch to ledger to see it
+    // Switch to ledger to see newly created certificates
     setActiveSubTab('ledger');
   };
 
@@ -347,32 +459,233 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
             </div>
 
             <form onSubmit={handleCreateAward} className="space-y-6">
-              {/* Step 1: Select Staff Member */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  1. اختر المعلم أو الموظف المكرم *
-                </label>
-                <select
-                  value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-xs sm:text-sm font-bold text-slate-800"
-                >
-                  <option value="">-- اختر من قائمة منسوبي المجمع --</option>
-                  {staffList.map(staff => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name} - {staff.roleTitle} (الرصيد الحالي: {staff.points || 0} نقطة | السجل: {maskNationalId(staff.nationalId)})
-                    </option>
-                  ))}
-                </select>
+              {/* Step 1: Selection tool for teachers (تحديد واختيار المعلمين) */}
+              <div className="bg-slate-50/80 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-600" />
+                      <span>1. تحديد واختيار المعلمين المكرمين *</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      حدد معلماً واحداً أو أكثر، أو اختر مجموعة لإصدار شهادات الشكر لهم دفعة واحدة.
+                    </p>
+                  </div>
+
+                  {/* Selection count badge */}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
+                      selectedStaffIds.length > 0
+                        ? 'bg-emerald-100 text-emerald-900 border-emerald-300 shadow-2xs'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}>
+                      تم تحديد: <span className="font-mono text-sm">{selectedStaffIds.length}</span> من أصل {staffList.length} منسوب
+                    </span>
+                  </div>
+                </div>
+
+                {/* Search & Quick Action Buttons */}
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Search input */}
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={staffSearch}
+                        onChange={(e) => setStaffSearch(e.target.value)}
+                        placeholder="ابحث باسم المعلم، التخصص، أو السجل المدني..."
+                        className="w-full pr-9 pl-8 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      {staffSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setStaffSearch('')}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Quick Selection Buttons */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllVisible}
+                        className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>تحديد المعروضين ({visibleStaff.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSelectAllTeachers}
+                        className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <span>المعلمون فقط</span>
+                      </button>
+
+                      {selectedStaffIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStaffIds([])}
+                          className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                        >
+                          إلغاء التحديد
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Stage filter pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span className="text-[11px] text-slate-500 font-bold ml-1">تصفية المرحلة:</span>
+                    {(['all', 'elementary', 'intermediate', 'secondary'] as const).map(stageKey => {
+                      const labels = {
+                        all: 'جميع المراحل',
+                        elementary: 'المرحلة الابتدائية',
+                        intermediate: 'المرحلة المتوسطة',
+                        secondary: 'المرحلة الثانوية'
+                      };
+                      return (
+                        <button
+                          key={stageKey}
+                          type="button"
+                          onClick={() => setStaffStageFilter(stageKey)}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            staffStageFilter === stageKey
+                              ? 'bg-emerald-900 text-white shadow-2xs'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {labels[stageKey]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected staff chips bar */}
+                {selectedStaffIds.length > 0 && (
+                  <div className="p-3 bg-emerald-50/90 border border-emerald-200 rounded-2xl">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[11px] font-black text-emerald-950 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>المعلمون المختارون لإصدار الشهادات ({selectedStaffIds.length}):</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStaffIds([])}
+                        className="text-[10px] text-red-700 hover:underline font-bold cursor-pointer"
+                      >
+                        مسح الكل
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                      {selectedStaffIds.map(id => {
+                        const s = staffList.find(item => item.id === id);
+                        if (!s) return null;
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1.5 bg-white text-slate-900 border border-emerald-300 text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs"
+                          >
+                            <span>{s.name}</span>
+                            <span className="text-[10px] text-slate-500">({s.roleTitle})</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleStaffSelection(id)}
+                              className="text-slate-400 hover:text-red-600 p-0.5 rounded transition-colors cursor-pointer"
+                              title="إلغاء تحديد هذا المعلم"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Staff Selection Grid / Scrollable Cards */}
+                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-2xl bg-white divide-y divide-slate-100 shadow-inner">
+                  {visibleStaff.length === 0 ? (
+                    <div className="p-6 text-center text-slate-400 text-xs font-bold">
+                      لا يوجد معلمون مطابقون لمعايير البحث الحالية
+                    </div>
+                  ) : (
+                    visibleStaff.map(staff => {
+                      const isChecked = selectedStaffIds.includes(staff.id);
+                      const badge = getTeacherBadge(staff.points || 0);
+                      return (
+                        <label
+                          key={staff.id}
+                          className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                            isChecked ? 'bg-emerald-50/80 hover:bg-emerald-100/70' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleStaffSelection(staff.id)}
+                              className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                                  {staff.name}
+                                </span>
+                                <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold">
+                                  {staff.roleTitle}
+                                </span>
+                                {badge.type !== 'none' && (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${badge.pillClass}`}>
+                                    <span>{badge.icon}</span>
+                                    <span>{badge.name}</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5">
+                                <span>السجل: <span className="font-mono" dir="ltr">{maskNationalId(staff.nationalId)}</span></span>
+                                {staff.phone && (
+                                  <span className="font-mono text-slate-400" dir="ltr">{staff.phone}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            {badge.type === 'none' && (
+                              <span className="hidden sm:inline-block text-[10px] text-slate-400">
+                                متبقي {badge.remainingToNext} للشارة المثالية
+                              </span>
+                            )}
+                            <span className="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-xl font-mono shadow-2xs">
+                              {staff.points || 0} نقطة
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               {/* Step 2: Select Category */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  2. مجال التكريم والإنجاز المستحق *
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    2. مجال التكريم والإنجاز المستحق (معتمد رسمياً بنقاط التميز) *
+                  </label>
+                  <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                    9 مجالات تكريم معتمدة
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {CATEGORIES.map(cat => {
                     const isSelected = selectedCategory === cat.id;
                     return (
@@ -405,11 +718,37 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                 </div>
               </div>
 
-              {/* Step 3: Certificate Title & Points */}
+              {/* Step 3: Date of Issuance - Dual Calendar (عرض التقويم الهجري والميلادي لاختيار يوم صدور الشهادة) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                    <span>3. تحديد تاريخ صدور الشهادة (عرض التقويم الهجري والميلادي) *</span>
+                  </label>
+                  <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                    تقويم أم القرى معتمد
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  انقر على أي يوم من التقويم لاختيار تاريخ صدور الشهادة، وتظهر لك التواريخ الهجرية والميلادية المقابلة بدقة تامة.
+                </p>
+
+                <DualCalendarPicker
+                  selectedDate={issueDate}
+                  hijriDate={hijriDate}
+                  onSelectDate={(iso, hijri) => {
+                    setIssueDate(iso);
+                    setHijriDate(hijri);
+                  }}
+                  onHijriChange={(customHijri) => setHijriDate(customHijri)}
+                />
+              </div>
+
+              {/* Step 4: Certificate Title & Points */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    3. عنوان موضوع التكريم
+                    4. عنوان موضوع التكريم
                   </label>
                   <input
                     type="text"
@@ -455,10 +794,10 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                 </div>
               </div>
 
-              {/* Step 4: Citation Text */}
+              {/* Step 5: Citation Text */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  4. نص الثناء والإشادة المطبوع في الشهادة الرسمية
+                  5. نص الثناء والإشادة المطبوع في الشهادة الرسمية
                 </label>
                 <textarea
                   rows={3}
@@ -470,10 +809,10 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                 />
               </div>
 
-              {/* Step 5: Optional Notes */}
+              {/* Step 6: Optional Notes */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  5. ملاحظات إدارية داخلية (اختياري)
+                  6. ملاحظات إدارية داخلية (اختياري)
                 </label>
                 <input
                   type="text"
@@ -485,13 +824,30 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
               </div>
 
               {/* Submit Button */}
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+                <div className="text-xs text-slate-600">
+                  {selectedStaffIds.length > 0 ? (
+                    <span className="font-bold text-emerald-900">
+                      سيتم إصدار <span className="font-black text-sm text-slate-900">{selectedStaffIds.length}</span> شهادة شكر ومنح <span className="font-black text-sm text-amber-600 font-mono">+{points}</span> نقطة لكل معلم مكرم
+                    </span>
+                  ) : (
+                    <span className="text-amber-800 font-bold flex items-center gap-1">
+                      ⚠️ يرجى تحديد معلم واحد على الأقل للمتابعة
+                    </span>
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white font-black text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ring-2 ring-emerald-500/20"
+                  disabled={selectedStaffIds.length === 0}
+                  className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ring-2 ring-emerald-500/20"
                 >
                   <Award className="w-5 h-5 text-amber-300" />
-                  <span>اعتماد وإصدار شهادة الشكر (+{points} نقطة)</span>
+                  <span>
+                    {selectedStaffIds.length > 1
+                      ? `إصدار (${selectedStaffIds.length}) شهادات شكر واعتماد النقاط (+${points})`
+                      : `اعتماد وإصدار شهادة الشكر (+${points} نقطة)`}
+                  </span>
                 </button>
               </div>
             </form>
@@ -587,9 +943,10 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                         <span className="font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           {award.certificateNumber}
                         </span>
-                        <span className="text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
+                        <span className="text-slate-600 font-medium flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-200">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
                           <span>{award.hijriDate}</span>
+                          <span className="text-slate-400 font-mono text-[11px]" dir="ltr">({award.date})</span>
                         </span>
                       </div>
 
@@ -673,7 +1030,7 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
       {activeSubTab === 'leaderboard' && (
         <div className="space-y-6">
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden p-6 sm:p-8">
-            <div className="text-center max-w-xl mx-auto space-y-2 mb-8">
+            <div className="text-center max-w-xl mx-auto space-y-2 mb-6">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 shadow-xs">
                 <Trophy className="w-6 h-6" />
               </div>
@@ -681,8 +1038,33 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                 لوحة شرف فرسان مجمع الشريعة التعليمي
               </h2>
               <p className="text-xs text-slate-500">
-                ترتيب المعلمين والإداريين حسب مجموع نقاط التميز المجمعة من انضباط الطابور، الحصص المثالية، والإشراف اليومي.
+                ترتيب المعلمين والإداريين حسب مجموع نقاط التميز وشارات الاستحقاق المعتمدة.
               </p>
+            </div>
+
+            {/* Official Badge Tiers Guide */}
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {BADGE_TIERS_GUIDE.map(tier => (
+                <div 
+                  key={tier.tier}
+                  className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 flex items-center gap-3 text-right"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xl shrink-0 shadow-2xs">
+                    {tier.icon}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-black text-xs text-slate-900">{tier.name}</span>
+                      <span className="font-mono text-[10px] bg-slate-200/80 text-slate-800 font-bold px-1.5 py-0.5 rounded">
+                        {tier.threshold} نقطة
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      {tier.description}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {leaderboard.length === 0 ? (
@@ -695,6 +1077,7 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                   const isTop1 = index === 0 && item.points > 0;
                   const isTop2 = index === 1 && item.points > 0;
                   const isTop3 = index === 2 && item.points > 0;
+                  const badge = getTeacherBadge(item.points);
 
                   return (
                     <div 
@@ -728,7 +1111,7 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                         </div>
 
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
                               {item.staff.name}
                             </h3>
@@ -737,9 +1120,29 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                                 فارس التميز الأول
                               </span>
                             )}
+                            {badge.type !== 'none' ? (
+                              <span className={`text-[10px] px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 font-bold ${badge.pillClass}`}>
+                                <span>{badge.icon}</span>
+                                <span>{badge.name}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
+                                متبقي {badge.remainingToNext} للشارة المثالية
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {item.staff.roleTitle} • السجل: <span className="font-mono" dir="ltr">{maskNationalId(item.staff.nationalId)}</span>
+                          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span>{item.staff.roleTitle}</span>
+                            <span>•</span>
+                            <span>السجل: <span className="font-mono" dir="ltr">{maskNationalId(item.staff.nationalId)}</span></span>
+                            {badge.type !== 'none' && badge.nextPoints && (
+                              <>
+                                <span>•</span>
+                                <span className="text-emerald-700 font-semibold">
+                                  متبقي {badge.remainingToNext} نقطة للشارة القادمة
+                                </span>
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -755,7 +1158,7 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedStaffId(item.staff.id);
+                            setSelectedStaffIds([item.staff.id]);
                             setActiveSubTab('create');
                           }}
                           className="px-3 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer whitespace-nowrap"
@@ -779,6 +1182,7 @@ export const RecognitionManager: React.FC<RecognitionManagerProps> = ({
           award={viewingAward}
           staff={staffList.find(s => s.id === viewingAward.staffId)}
           schoolSettings={schoolSettings}
+          onUpdateAward={onUpdateAward}
           onClose={() => setViewingAward(null)}
         />
       )}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   X, 
   Printer, 
@@ -11,18 +11,22 @@ import {
   QrCode, 
   Building2,
   Calendar,
-  Share2
+  Share2,
+  Edit3
 } from 'lucide-react';
 import { RecognitionAward, SchoolSettings, StaffMember } from '../types';
 import { MoeLogo } from './MoeLogo';
-import { maskNationalId } from '../utils/formatters';
+import { maskNationalId, parseDateString, formatToIsoDate, getFormattedHijriDate } from '../utils/formatters';
 import { generateRecognitionWhatsApp } from '../utils/whatsapp';
+import { PrincipalSignature } from './PrincipalSignature';
+import { getTeacherBadge } from '../utils/badges';
 
 interface CertificateModalProps {
   award: RecognitionAward;
   staff?: StaffMember;
   schoolSettings: SchoolSettings;
   onClose: () => void;
+  onUpdateAward?: (updatedAward: RecognitionAward) => void;
 }
 
 export const CertificateModal: React.FC<CertificateModalProps> = ({
@@ -30,23 +34,39 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   staff,
   schoolSettings,
   onClose,
+  onUpdateAward,
 }) => {
+  const [currentAward, setCurrentAward] = useState<RecognitionAward>(award);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [editDate, setEditDate] = useState(award.date);
+  const [editHijriDate, setEditHijriDate] = useState(award.hijriDate);
+  const [saveDateSuccess, setSaveDateSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
   const certificateRef = useRef<HTMLDivElement>(null);
 
+  // Keep currentAward in sync if prop changes
+  useEffect(() => {
+    setCurrentAward(award);
+    setEditDate(award.date);
+    setEditHijriDate(award.hijriDate);
+  }, [award]);
+
   // Associated staff or fallback
   const targetStaff: StaffMember = staff || {
-    id: award.staffId,
-    name: award.staffName,
-    nationalId: award.staffNationalId,
-    phone: award.staffPhone,
+    id: currentAward.staffId,
+    name: currentAward.staffName,
+    nationalId: currentAward.staffNationalId,
+    phone: currentAward.staffPhone,
     role: 'teacher',
-    roleTitle: award.roleTitle,
+    roleTitle: currentAward.roleTitle,
     stage: 'all',
     active: true,
   };
 
-  const { url: waUrl, text: waText } = generateRecognitionWhatsApp(targetStaff, award, schoolSettings);
+  const teacherPoints = targetStaff.points ?? currentAward.points;
+  const teacherBadge = getTeacherBadge(teacherPoints);
+
+  const { url: waUrl, text: waText } = generateRecognitionWhatsApp(targetStaff, currentAward, schoolSettings);
 
   const handlePrint = () => {
     window.print();
@@ -60,6 +80,31 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
     } catch {
       // fallback
     }
+  };
+
+  const handleDateChange = (val: string) => {
+    setEditDate(val);
+    if (val) {
+      const parsed = parseDateString(val);
+      setEditHijriDate(getFormattedHijriDate(parsed));
+    }
+  };
+
+  const handleSaveDate = () => {
+    const updated: RecognitionAward = {
+      ...currentAward,
+      date: editDate,
+      hijriDate: editHijriDate.trim() || getFormattedHijriDate(parseDateString(editDate)),
+    };
+    setCurrentAward(updated);
+    if (onUpdateAward) {
+      onUpdateAward(updated);
+    }
+    setSaveDateSuccess(true);
+    setTimeout(() => {
+      setSaveDateSuccess(false);
+      setIsEditingDate(false);
+    }, 1200);
   };
 
   return (
@@ -77,11 +122,25 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               شهادة شكر وتقدير رسمية معتمدة
             </span>
             <span className="bg-amber-500/20 text-amber-300 text-xs px-2.5 py-0.5 rounded-full font-mono border border-amber-500/30">
-              {award.certificateNumber}
+              {currentAward.certificateNumber}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Edit Certificate Date Button */}
+            <button
+              onClick={() => setIsEditingDate(!isEditingDate)}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer border ${
+                isEditingDate
+                  ? 'bg-amber-400 text-slate-950 border-amber-300'
+                  : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/30'
+              }`}
+              title="تعديل تاريخ إصدار الشهادة (الميلادي والهجري)"
+            >
+              <Calendar className="w-3.5 h-3.5 text-amber-400" />
+              <span>تعديل التاريخ</span>
+            </button>
+
             {/* WhatsApp Send Button */}
             <a
               href={waUrl}
@@ -124,6 +183,58 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
           </div>
         </div>
 
+        {/* Date Editing Panel (Hidden on Print) */}
+        {isEditingDate && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 p-3 sm:p-4 print:hidden animate-in fade-in slide-in-from-top-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 max-w-3xl mx-auto">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>اختيار وتعديل تاريخ إصدار الشهادة:</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">الميلادي:</span>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">الهجري:</span>
+                  <input
+                    type="text"
+                    value={editHijriDate}
+                    onChange={(e) => setEditHijriDate(e.target.value)}
+                    className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 w-48"
+                    placeholder="25 ربيع الأول 1448هـ"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={handleSaveDate}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                >
+                  {saveDateSuccess ? <Check className="w-3.5 h-3.5" /> : null}
+                  <span>{saveDateSuccess ? 'تم التحديث!' : 'حفظ التاريخ'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingDate(false)}
+                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* THE OFFICIAL PRINTABLE CERTIFICATE CANVAS */}
         {/* ======================================================== */}
@@ -163,9 +274,9 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               {/* Left: Certificate Metadata */}
               <div className="text-left text-xs text-slate-600 space-y-0.5 font-mono">
                 <div className="bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-right">
-                  <p><span className="text-slate-500 font-sans">رقم التوثيق: </span><strong className="text-amber-900">{award.certificateNumber}</strong></p>
-                  <p><span className="text-slate-500 font-sans">التاريخ: </span><strong className="text-slate-800">{award.hijriDate}</strong></p>
-                  <p><span className="text-slate-500 font-sans">الموافق: </span><span>{award.date}</span></p>
+                  <p><span className="text-slate-500 font-sans">رقم التوثيق: </span><strong className="text-amber-900">{currentAward.certificateNumber}</strong></p>
+                  <p><span className="text-slate-500 font-sans">التاريخ: </span><strong className="text-slate-800">{currentAward.hijriDate}</strong></p>
+                  <p><span className="text-slate-500 font-sans">الموافق: </span><span>{currentAward.date}</span></p>
                 </div>
               </div>
             </div>
@@ -192,15 +303,21 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               {/* Teacher Name Highlight Box */}
               <div className="bg-gradient-to-r from-emerald-50 via-amber-50/70 to-emerald-50 p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-600/40 shadow-xs inline-block w-full max-w-lg mx-auto">
                 <h2 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-wide">
-                  الأستاذ / {award.staffName}
+                  الأستاذ / {currentAward.staffName}
                 </h2>
                 <div className="flex items-center justify-center gap-3 mt-1.5 text-xs text-slate-600 font-medium flex-wrap">
                   <span className="bg-white/80 px-2.5 py-0.5 rounded-md border border-slate-200">
-                    {award.roleTitle}
+                    {currentAward.roleTitle}
                   </span>
                   <span className="bg-white/80 px-2.5 py-0.5 rounded-md border border-slate-200">
-                    السجل المدني: <strong className="font-mono text-slate-800" dir="ltr">{maskNationalId(award.staffNationalId)}</strong>
+                    السجل المدني: <strong className="font-mono text-slate-800" dir="ltr">{maskNationalId(currentAward.staffNationalId)}</strong>
                   </span>
+                  {teacherBadge.type !== 'none' && (
+                    <span className={`px-2.5 py-0.5 rounded-md font-bold text-xs inline-flex items-center gap-1 ${teacherBadge.pillClass}`}>
+                      <span>{teacherBadge.icon}</span>
+                      <span>{teacherBadge.name}</span>
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -209,20 +326,20 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                 <span className="text-xs text-slate-500 block mb-1.5">نظير مشاركته الفاعلة وتميزه في:</span>
                 <div className="inline-flex items-center gap-2 bg-amber-100/90 text-amber-950 border border-amber-300 font-black px-4 sm:px-6 py-2 rounded-xl text-sm sm:text-base shadow-2xs">
                   <Award className="w-5 h-5 text-amber-700" />
-                  <span>{award.categoryTitle}</span>
+                  <span>{currentAward.categoryTitle}</span>
                 </div>
               </div>
 
               {/* Citation Body Text */}
               <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 text-xs sm:text-sm text-slate-800 leading-relaxed italic font-medium">
-                "{award.details}"
+                "{currentAward.details}"
               </div>
 
               {/* Points Badge */}
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-800 to-emerald-900 text-white px-5 py-2 rounded-full font-bold text-xs sm:text-sm shadow-xs border border-amber-400">
                 <Star className="w-4 h-4 text-amber-300 fill-amber-300" />
                 <span>رصيد النقاط المستحقة المضافة:</span>
-                <span className="text-amber-300 font-mono text-base font-black dir-ltr">+{award.points}</span>
+                <span className="text-amber-300 font-mono text-base font-black dir-ltr">+{currentAward.points}</span>
                 <span className="text-emerald-200 text-xs">نقطة تميز</span>
               </div>
             </div>
@@ -236,7 +353,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                 </div>
                 <div className="text-right text-[10px] space-y-0.5">
                   <p className="font-bold text-slate-800">شهادة معتمدة إلكترونياً</p>
-                  <p className="text-slate-500 font-mono">{award.certificateNumber}</p>
+                  <p className="text-slate-500 font-mono">{currentAward.certificateNumber}</p>
                   <p className="text-emerald-700 font-bold">موثقة بمنظومة التواصل</p>
                 </div>
               </div>
@@ -254,11 +371,17 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               </div>
 
               {/* Principal Signature & Endorsement */}
-              <div className="text-center sm:text-left space-y-1">
+              <div className="text-center sm:text-left space-y-1 relative">
                 <p className="text-xs font-bold text-slate-600">مدير مجمع الشريعة التعليمي للبنين</p>
                 <p className="text-sm font-black text-emerald-950">{schoolSettings.principalName}</p>
-                <div className="font-serif italic text-emerald-800 text-xs pt-1 opacity-90">
-                  [معتمد وموقع رقمياً]
+                <div className="flex items-center justify-center sm:justify-start -my-1">
+                  <PrincipalSignature 
+                    className="w-32 h-14 object-contain"
+                    customUrl={schoolSettings.principalSignatureUrl}
+                  />
+                </div>
+                <div className="font-serif italic text-emerald-800 text-xs opacity-90">
+                  [معتمد وموقع رسمياً]
                 </div>
               </div>
             </div>

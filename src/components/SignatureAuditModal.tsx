@@ -22,6 +22,7 @@ import { generateStaffDispatchWhatsApp } from '../utils/whatsapp';
 import { MoeLogo } from './MoeLogo';
 import { CircularProgress } from './CircularProgress';
 import { maskNationalId } from '../utils/formatters';
+import { PrincipalSignature } from './PrincipalSignature';
 
 interface SignatureAuditModalProps {
   document: DispatchedDocument;
@@ -454,11 +455,25 @@ export const SignatureAuditModal: React.FC<SignatureAuditModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200">
-                  <p className="font-bold text-slate-800 text-xs">مدير مجمع الشريعة التعليمي للبنين</p>
-                  <p className="text-emerald-950 font-black text-sm mt-1.5">{schoolSettings.principalName}</p>
-                  <div className="mt-4 pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[11px] text-slate-500 px-4">
-                    <span>الختم والتوقيع: ............................</span>
+                <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 relative overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <p className="font-bold text-slate-800 text-xs">مدير مجمع الشريعة التعليمي للبنين</p>
+                    <p className="text-emerald-950 font-black text-sm mt-1.5">{schoolSettings.principalName}</p>
+                  </div>
+
+                  {/* Principal Signature without background */}
+                  <div className="flex items-center justify-center my-1 relative py-1">
+                    <PrincipalSignature 
+                      className="w-36 h-14 object-contain" 
+                      customUrl={schoolSettings.principalSignatureUrl} 
+                    />
+                  </div>
+
+                  <div className="mt-1 pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[11px] text-slate-500 px-4">
+                    <span className="text-emerald-800 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span>
+                      الختم والتوقيع: معتمد وموقّع
+                    </span>
                     <span>التاريخ: {currentDateFormatted}</span>
                   </div>
                 </div>

@@ -3,6 +3,8 @@ export type StaffRole =
   | 'admin' 
   | 'counselor' 
   | 'vice_principal' 
+  | 'student_affairs_vice_principal'
+  | 'computer_lab_prep'
   | 'principal' 
   | 'activity_leader' 
   | 'lab_prep' 
@@ -110,6 +112,7 @@ export interface SchoolSettings {
   academicYear: string;
   adminPassword?: string; // رمز الدخول السري لإدارة المنظومة (افتراضياً: admin)
   adminUsername?: string; // اسم مستخدم الإدارة (افتراضياً: admin)
+  principalSignatureUrl?: string; // رابط أو بيانات توقيع المدير بدون خلفية
 }
 
 export interface CircularTemplate {
@@ -127,10 +130,17 @@ export interface CircularTemplate {
 }
 
 export type RecognitionCategory = 
-  | 'morning_assembly' // المشاركة في انضباط الطابور الصباحي
-  | 'ideal_lesson'     // تأدية حصة مثالية
-  | 'supervision'      // المشاركة في الإشراف
-  | 'custom';          // تحفيز وتكريم خاص
+  | 'morning_assembly'    // المشاركة في انضباط الطابور الصباحي (10 نقاط)
+  | 'ideal_lesson'        // تأدية حصة مثالية ونموذجية (20 نقطة)
+  | 'daily_supervision'   // المشاركة في الإشراف اليومي (15 نقطة)
+  | 'duty_shift'          // المشاركة في المناوبة (20 نقطة)
+  | 'school_discipline'   // تعزيز الانضباط المدرسي (15 نقطة)
+  | 'student_activities'  // المشاركة في الأنشطة الطلابية والفعاليات (10 نقاط)
+  | 'activity_sessions'   // تفعيل حصص النشاط (5 نقاط)
+  | 'positive_behavior'   // مبادرة لتعزيز السلوك الإيجابي (20 نقطة)
+  | 'mutual_visits'       // تنفيذ ومشاركة في الزيارات المتبادلة (20 نقطة)
+  | 'supervision'         // للتوافق مع السجلات السابقة
+  | 'custom';             // تكريم ومبادرة مخصصة
 
 export interface RecognitionAward {
   id: string;

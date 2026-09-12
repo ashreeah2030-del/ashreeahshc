@@ -267,6 +267,11 @@ export function loadSchoolSettings(): SchoolSettings {
         parsed.adminPhone = '0509205097';
         changed = true;
       }
+      // Ensure principalSignatureUrl is set to official transparent signature
+      if (!parsed.principalSignatureUrl) {
+        parsed.principalSignatureUrl = DEFAULT_SCHOOL_SETTINGS.principalSignatureUrl;
+        changed = true;
+      }
       if (changed) {
         saveSchoolSettings(parsed);
       }
@@ -436,6 +441,49 @@ export function addRecognitionAward(
   return { newAward, updatedAwards, updatedStaff };
 }
 
+export function addBulkRecognitionAwards(
+  awardsDataList: Omit<RecognitionAward, 'id' | 'createdAt' | 'certificateNumber'>[],
+  currentStaffList?: StaffMember[]
+): { newAwards: RecognitionAward[]; updatedAwards: RecognitionAward[]; updatedStaff: StaffMember[] } {
+  const awards = loadRecognitionAwards();
+  const staffList = currentStaffList && currentStaffList.length > 0 ? currentStaffList : loadStaffMembers();
+
+  let serial = awards.length;
+  const newAwards: RecognitionAward[] = awardsDataList.map((data, idx) => {
+    serial += 1;
+    return {
+      ...data,
+      id: `award-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+      certificateNumber: `TAK-1448-${String(serial).padStart(4, '0')}`,
+      createdAt: new Date().toISOString(),
+    };
+  });
+
+  const updatedAwards = [...newAwards, ...awards];
+  saveRecognitionAwards(updatedAwards);
+
+  // Accumulate points map
+  const pointsMap = new Map<string, number>();
+  for (const aw of awardsDataList) {
+    const current = pointsMap.get(aw.staffId) || 0;
+    pointsMap.set(aw.staffId, current + (aw.points || 0));
+  }
+
+  const updatedStaff = staffList.map(s => {
+    if (pointsMap.has(s.id)) {
+      const currentPts = typeof s.points === 'number' ? s.points : 0;
+      return {
+        ...s,
+        points: currentPts + (pointsMap.get(s.id) || 0),
+      };
+    }
+    return s;
+  });
+  saveStaffMembers(updatedStaff);
+
+  return { newAwards, updatedAwards, updatedStaff };
+}
+
 export function deleteRecognitionAward(
   awardId: string,
   currentStaffList?: StaffMember[]
@@ -455,6 +503,36 @@ export function deleteRecognitionAward(
         return {
           ...s,
           points: Math.max(0, currentPts - (target.points || 0)),
+        };
+      }
+      return s;
+    });
+    saveStaffMembers(updatedStaff);
+  }
+
+  return { updatedAwards, updatedStaff };
+}
+
+export function updateRecognitionAward(
+  updatedAward: RecognitionAward,
+  currentStaffList?: StaffMember[]
+): { updatedAwards: RecognitionAward[]; updatedStaff: StaffMember[] } {
+  const awards = loadRecognitionAwards();
+  const staffList = currentStaffList && currentStaffList.length > 0 ? currentStaffList : loadStaffMembers();
+  
+  const oldAward = awards.find(a => a.id === updatedAward.id);
+  const updatedAwards = awards.map(a => a.id === updatedAward.id ? updatedAward : a);
+  saveRecognitionAwards(updatedAwards);
+
+  let updatedStaff = staffList;
+  if (oldAward && oldAward.points !== updatedAward.points) {
+    const diff = (updatedAward.points || 0) - (oldAward.points || 0);
+    updatedStaff = staffList.map(s => {
+      if (s.id === updatedAward.staffId) {
+        const currentPts = typeof s.points === 'number' ? s.points : 0;
+        return {
+          ...s,
+          points: Math.max(0, currentPts + diff),
         };
       }
       return s;
