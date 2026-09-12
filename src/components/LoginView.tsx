@@ -78,6 +78,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
 
+  // Resolve the single account owner to display for quick access
+  const accountOwner = React.useMemo(() => {
+    try {
+      const savedOwnerId = localStorage.getItem('shariah_platform_account_owner_id');
+      if (savedOwnerId) {
+        const found = staffList.find(s => s.id === savedOwnerId || s.nationalId === savedOwnerId);
+        if (found) return found;
+      }
+    } catch (e) {}
+
+    // Default account owner: School principal / manager
+    return staffList.find(s => 
+      s.role === 'principal' || 
+      s.nationalId === '1028471923' || 
+      (schoolSettings.principalName && s.name && schoolSettings.principalName.includes(s.name.replace('الأستاذ ', '').trim())) ||
+      s.name.includes('نهاري') ||
+      s.name.includes('حمود')
+    ) || staffList[0] || null;
+  }, [staffList, schoolSettings.principalName]);
+
   // Real-time lookup as user types National ID in registration
   const handleRegNationalIdChange = (value: string) => {
     const cleanDigits = value.replace(/[^0-9]/g, '').slice(0, 10);
@@ -161,6 +181,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       onRegisterStaff(memberToSave);
     }
 
+    try {
+      localStorage.setItem('shariah_platform_account_owner_id', memberToSave.nationalId || memberToSave.id);
+    } catch (e) {}
+
     setRegisterSuccess(`تم تفعيل وتحديث حسابك بنجاح أ. ${memberToSave.name}! جاري نقلك لمساحتك الخاصة...`);
 
     setTimeout(() => {
@@ -178,6 +202,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
     if (onRegisterStaff) {
       onRegisterStaff(updatedStaff);
     }
+    try {
+      localStorage.setItem('shariah_platform_account_owner_id', updatedStaff.nationalId || updatedStaff.id);
+    } catch (e) {}
     setActiveTab('staff');
     setNationalIdOrPhone(updatedStaff.nationalId);
     setPin(updatedStaff.pin || '');
@@ -219,6 +246,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       setStaffError('رمز الدخول السري غير صحيح. يرجى التحقق من كلمة المرور أو استخدام خيار "نسيت كلمة المرور" لاستعادتها.');
       return;
     }
+
+    try {
+      localStorage.setItem('shariah_platform_account_owner_id', foundStaff.nationalId || foundStaff.id);
+    } catch (e) {}
 
     onLoginSuccess({
       role: 'staff',
@@ -563,26 +594,44 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ArrowLeft className="w-4 h-4" />
                   </button>
 
-                  {/* Quick Staff Selector for evaluation */}
-                  <div className="pt-4 border-t border-slate-100">
-                    <p className="text-[11px] font-bold text-slate-500 mb-2 flex items-center justify-between">
-                      <span>تجربة سريعة (اختر معلماً لتجربة الخصوصية فوراً):</span>
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                      {staffList.slice(0, 9).map(staff => (
-                        <button
-                          key={staff.id}
-                          type="button"
-                          onClick={() => handleQuickStaffSelect(staff)}
-                          className="text-right p-2 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 border-r-3 border-r-emerald-600 transition-colors text-[11px] cursor-pointer"
-                        >
-                          <span className="font-bold text-slate-900 block truncate">{staff.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono" dir="ltr">سجل: {maskNationalId(staff.nationalId)}</span>
-                        </button>
-                      ))}
+                  {/* Quick Access - Only Account Owner */}
+                  {accountOwner && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>صاحب الحساب (تجربة سريعة):</span>
+                        </span>
+                        <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                          الحساب المعتمد
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStaffSelect(accountOwner)}
+                        className="w-full text-right p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 border-r-4 border-r-emerald-700 transition-all text-xs cursor-pointer flex items-center justify-between group shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                            {accountOwner.name.charAt(0)}
+                          </div>
+                          <div className="truncate">
+                            <span className="font-black text-slate-900 block truncate group-hover:text-emerald-900">
+                              {accountOwner.name}
+                            </span>
+                            <span className="text-[10px] text-slate-500 block truncate">
+                              {accountOwner.roleTitle || 'مدير المجمع التعليمي'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-left shrink-0 mr-2">
+                          <span className="text-[10px] text-slate-600 font-mono bg-white px-2 py-1 rounded-lg border border-slate-200 block" dir="ltr">
+                            سجل: {maskNationalId(accountOwner.nationalId)}
+                          </span>
+                        </div>
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </form>
               ) : activeTab === 'register' ? (
                 /* New Account Registration Form */
